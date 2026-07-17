@@ -1,0 +1,17 @@
+{
+  "name": "automacao-curriculo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerador local de currículos em PDF, adaptados por vaga, sem API paga.",
+  "scripts": {
+    "build-resume": "node scripts/build-resume.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.6",
+    "express": "^4.21.2",
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5",
+    "puppeteer-core": "^23.11.1"
+  }
+}

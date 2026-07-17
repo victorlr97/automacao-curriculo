@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Currículo</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-top">
+      <h1>Gerador de Currículo</h1>
+      <div class="profile-switcher">
+        <select id="profile-select" aria-label="Perfil ativo"></select>
+        <button id="btn-new-profile" class="btn-secondary" title="Criar novo perfil">+ Novo perfil</button>
+        <button id="btn-delete-profile" class="btn-icon-danger" title="Excluir perfil atual">Excluir perfil</button>
+      </div>
+    </div>
+    <p id="profile-status" class="status"></p>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="gerar">Gerar Currículo</button>
+      <button class="tab-btn" data-tab="outputs">Meus Currículos</button>
+      <button class="tab-btn" data-tab="editor">Editor do Banco</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-gerar" class="tab-panel active">
+      <div class="panel-grid">
+        <div class="panel-col">
+          <label class="field-label" for="job-description">Cole a descrição da vaga</label>
+          <textarea id="job-description" rows="18" placeholder="Cole aqui o texto completo da vaga (requisitos, stack, responsabilidades...)"></textarea>
+          <label class="field-label" for="video-instructions-input">Roteiro do vídeo (opcional)</label>
+          <textarea id="video-instructions-input" rows="4" placeholder="Se a vaga der instruções específicas do que o vídeo de apresentação deve cobrir (perguntas, duração, pontos obrigatórios), cole aqui."></textarea>
+          <label class="field-label" for="file-name-input">Nome do arquivo (opcional)</label>
+          <input type="text" id="file-name-input" placeholder="Ex: Victor Rosa - Empresa X (deixe em branco pra gerar automático)">
+          <button id="btn-generate" class="btn-primary">Gerar PDF</button>
+          <p id="generate-status" class="status"></p>
+        </div>
+        <div class="panel-col">
+          <div id="result-panel" class="result-panel hidden">
+            <h3>Resultado</h3>
+            <dl class="result-dl">
+              <dt>Perfil identificado</dt><dd id="result-profile"></dd>
+              <dt>Idioma</dt><dd id="result-language"></dd>
+              <dt>Projetos escolhidos</dt><dd id="result-projects"></dd>
+              <dt>Resumo</dt><dd id="result-summary"></dd>
+            </dl>
+            <a id="result-download" href="#" target="_blank" class="btn-secondary">Abrir / baixar PDF</a>
+            <div id="result-script-block" class="script-block hidden">
+              <div class="script-block-header">
+                <h4>Texto de apresentação (vídeo)</h4>
+                <button id="btn-copy-result-script" class="btn-secondary">Copiar</button>
+              </div>
+              <p id="result-script-text" class="script-text"></p>
+            </div>
+            <iframe id="result-preview" class="pdf-preview" title="Pré-visualização do PDF"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-outputs" class="tab-panel">
+      <div class="import-bar">
+        <input type="text" id="import-file-name" placeholder="Nome do arquivo (opcional)">
+        <label for="import-file-input" class="btn-secondary">Importar currículo (PDF)</label>
+        <input type="file" id="import-file-input" accept="application/pdf" hidden>
+        <span id="import-status" class="status"></span>
+      </div>
+      <div class="panel-grid">
+        <div class="panel-col">
+          <div id="resumes-list" class="resumes-list"></div>
+        </div>
+        <div class="panel-col">
+          <div id="outputs-preview-panel" class="result-panel hidden">
+            <h3>Pré-visualização</h3>
+            <div class="outputs-actions">
+              <a id="outputs-download" href="#" target="_blank" class="btn-secondary">Abrir / baixar PDF</a>
+              <button id="btn-edit-resume" class="btn-secondary">Editar</button>
+              <button id="btn-translate-resume" class="btn-secondary">Traduzir</button>
+            </div>
+            <p id="outputs-action-status" class="status"></p>
+            <div id="outputs-script-block" class="script-block hidden">
+              <div class="script-block-header">
+                <h4>Texto de apresentação (vídeo)</h4>
+                <button id="btn-copy-outputs-script" class="btn-secondary">Copiar</button>
+              </div>
+              <p id="outputs-script-text" class="script-text"></p>
+            </div>
+            <iframe id="outputs-preview" class="pdf-preview" title="Pré-visualização do PDF"></iframe>
+            <div id="resume-edit-form" class="hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-editor" class="tab-panel">
+      <div class="editor-toolbar">
+        <button id="btn-save-db" class="btn-primary">Salvar alterações</button>
+        <button id="btn-reload-db" class="btn-secondary">Descartar alterações</button>
+        <label for="db-import-file-input" class="btn-secondary">Importar currículo (PDF)</label>
+        <input type="file" id="db-import-file-input" accept="application/pdf" hidden>
+        <p id="editor-status" class="status"></p>
+      </div>
+      <p id="db-import-status" class="status"></p>
+      <div class="editor-shell">
+        <nav class="editor-nav" id="editor-nav"></nav>
+        <div class="editor-content" id="editor-root"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="new-profile-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h3>Novo perfil</h3>
+      <p class="status">Cria um banco de dados e uma lista de currículos totalmente separados, pra outra pessoa ou outro conjunto de dados.</p>
+      <label class="field-label" for="new-profile-name">Nome</label>
+      <input type="text" id="new-profile-name" placeholder="Ex: Maria Silva">
+      <div class="modal-actions">
+        <button id="btn-new-profile-cancel" class="btn-secondary">Cancelar</button>
+        <button id="btn-new-profile-confirm" class="btn-primary">Criar perfil</button>
+      </div>
+      <p id="new-profile-status" class="status"></p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

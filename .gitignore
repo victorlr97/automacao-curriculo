@@ -1,0 +1,6 @@
+node_modules/
+
+# Dados pessoais (fatos de perfil, currículos gerados) — nunca versionados.
+# O app recria essas pastas sozinho na primeira vez que roda.
+data/
+output/
