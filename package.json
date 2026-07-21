@@ -5,7 +5,10 @@
   "description": "Gerador local de currículos em PDF, adaptados por vaga, sem API paga.",
   "scripts": {
     "build-resume": "node scripts/build-resume.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "build": "cd client && npm run build",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently -n server,client -c blue,magenta \"npm start\" \"npm run dev:client\""
   },
   "dependencies": {
     "cross-spawn": "^7.0.6",
@@ -13,5 +16,8 @@
     "multer": "^2.2.0",
     "pdf-parse": "^2.4.5",
     "puppeteer-core": "^23.11.1"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }

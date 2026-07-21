@@ -1,0 +1,143 @@
+import { useEffect, useState } from 'react';
+import * as api from '../api';
+import type { GenerateResumeResponse, ResolvedResume } from '../types';
+
+export type PreviewMode = 'preview' | 'edit';
+
+/** Toda a lógica da geração de currículo (formulário da vaga + chamada de
+ * IA + resultado) e da edição pós-geração (mesmo padrão de "Meus Currículos" →
+ * Editar), extraída pra ser reaproveitada nas colunas direita/central do
+ * workspace unificado. */
+export function useGenerateResume(profileId: string | null) {
+  const [jobDescription, setJobDescription] = useState('');
+  const [videoInstructions, setVideoInstructions] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<GenerateResumeResponse | null>(null);
+
+  // Conteúdo estruturado do currículo recém-gerado (o mesmo JSON editável de
+  // "Meus Currículos"), usado pra renderizar a prévia como documento e pra
+  // permitir editar o texto exato que a IA escreveu, seção por seção.
+  const [resolved, setResolved] = useState<ResolvedResume | null>(null);
+  const [mode, setMode] = useState<PreviewMode>('preview');
+  const [activeEditSection, setActiveEditSection] = useState<string | null>(null);
+  const [editFileName, setEditFileName] = useState('');
+  const [editVideoInstructions, setEditVideoInstructions] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [scriptGenerating, setScriptGenerating] = useState(false);
+  const [scriptStatus, setScriptStatus] = useState('');
+
+  // Troca de perfil esconde o resultado gerado, mas mantém o que já estava
+  // digitado nos campos (mesmo comportamento do app original).
+  useEffect(() => {
+    setResult(null);
+    setResolved(null);
+    setMode('preview');
+    setActiveEditSection(null);
+  }, [profileId]);
+
+  async function handleGenerate() {
+    if (!jobDescription.trim()) {
+      setStatus('Cole a descrição da vaga primeiro.');
+      setError(true);
+      return;
+    }
+    if (!profileId) return;
+
+    setGenerating(true);
+    setStatus('');
+    setError(false);
+    try {
+      const data = await api.generateResume(profileId, {
+        jobDescription: jobDescription.trim(),
+        videoInstructions: videoInstructions.trim(),
+        fileName: fileName.trim()
+      });
+      setResult(data);
+      setMode('preview');
+      setActiveEditSection(null);
+      setEditFileName(data.slug);
+      setEditVideoInstructions('');
+      setScriptStatus('');
+      const resolvedResume = await api.getResumeJson(data.pdfUrl);
+      setResolved(resolvedResume);
+    } catch (err) {
+      setStatus(`Erro: ${(err as Error).message}`);
+      setError(true);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleSectionClick(section: string) {
+    setActiveEditSection(section);
+    setMode('edit');
+  }
+
+  function handleBackToPreview() {
+    setMode('preview');
+  }
+
+  async function handleSave() {
+    if (!result || !resolved || !profileId) return;
+    setSaving(true);
+    setStatus('Salvando e gerando PDF...');
+    setError(false);
+    try {
+      const res = await api.updateResume(profileId, result.slug, { ...resolved, fileName: editFileName });
+      setResult({ ...result, slug: res.slug, pdfUrl: res.pdfUrl });
+      setEditFileName(res.slug);
+      setStatus(res.slug !== result.slug ? `Salvo como um novo arquivo: "${res.slug}".` : 'Salvo! PDF atualizado.');
+    } catch (err) {
+      setStatus(`Erro: ${(err as Error).message}`);
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleGenerateScript() {
+    if (!resolved || !result || !profileId) return;
+    setScriptGenerating(true);
+    setScriptStatus('');
+    try {
+      const { presentationScript } = await api.generateScript(profileId, result.slug, editVideoInstructions);
+      setResolved({ ...resolved, presentationScript });
+    } catch (err) {
+      setScriptStatus(`Erro: ${(err as Error).message}`);
+    } finally {
+      setScriptGenerating(false);
+    }
+  }
+
+  return {
+    jobDescription,
+    setJobDescription,
+    videoInstructions,
+    setVideoInstructions,
+    fileName,
+    setFileName,
+    status,
+    error,
+    generating,
+    result,
+    handleGenerate,
+    resolved,
+    setResolved,
+    mode,
+    activeEditSection,
+    editFileName,
+    setEditFileName,
+    editVideoInstructions,
+    setEditVideoInstructions,
+    saving,
+    scriptGenerating,
+    scriptStatus,
+    handleSectionClick,
+    handleBackToPreview,
+    handleSave,
+    handleGenerateScript
+  };
+}

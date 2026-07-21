@@ -18,6 +18,10 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(PROJECT_ROOT, 'public')));
 app.use('/output', express.static(OUTPUT_DIR));
+// Reaproveita as mesmas fontes do template do PDF (PT Serif + Lato) na UI do
+// app, pra criar identidade visual coerente entre a ferramenta e o currículo
+// que ela gera.
+app.use('/fonts', express.static(path.join(PROJECT_ROOT, 'template', 'fonts')));
 
 function slugify(text) {
   const slug = String(text || '')

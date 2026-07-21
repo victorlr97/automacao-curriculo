@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/* Mesmas fontes do template do PDF (template/fonts), servidas pelo Express
+   em /fonts — pra que o app e o currículo que ele gera tenham a mesma
+   identidade tipográfica. */
+@font-face {
+  font-family: "PT Serif";
+  font-weight: 400;
+  font-style: normal;
+  src: url("/fonts/PTSerif-Regular.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "PT Serif";
+  font-weight: 700;
+  font-style: normal;
+  src: url("/fonts/PTSerif-Bold.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "PT Serif";
+  font-weight: 400;
+  font-style: italic;
+  src: url("/fonts/PTSerif-Italic.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lato";
+  font-weight: 400;
+  font-style: normal;
+  src: url("/fonts/Lato-Regular.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lato";
+  font-weight: 700;
+  font-style: normal;
+  src: url("/fonts/Lato-Bold.woff2") format("woff2");
+  font-display: swap;
+}
+
+@theme {
+  --font-display: "PT Serif", Georgia, "Times New Roman", serif;
+  --font-body: "Lato", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Escala de tinta próxima da já usada no PDF (scripts/render.js). */
+  --color-ink: #16181c;
+  --color-ink-2: #333333;
+  --color-ink-soft: #5b6570;
+  --color-ink-faint: #8b929b;
+
+  /* Azul de destaque compartilhado com o PDF gerado (#1a5fb4). */
+  --color-accent: #1a5fb4;
+  --color-accent-dark: #123f7d;
+  --color-accent-soft: #eaf1fb;
+  --color-accent-soft-strong: #d7e6f9;
+
+  --color-danger: #c0392b;
+  --color-danger-dark: #9a2d21;
+  --color-danger-soft: #fbeae8;
+
+  --color-border: #e1e5ea;
+  --color-border-strong: #c9cfd6;
+  --color-bg: #f5f6f8;
+
+  --shadow-xs: 0 1px 2px rgba(20, 23, 28, 0.06), 0 1px 1px rgba(20, 23, 28, 0.04);
+  --shadow-elevated: 0 8px 24px -6px rgba(20, 23, 28, 0.16), 0 2px 6px rgba(20, 23, 28, 0.06);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-ink-2);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  color: var(--color-ink);
+}
+
+::selection {
+  background: var(--color-accent-soft-strong);
+  color: var(--color-accent-dark);
+}
