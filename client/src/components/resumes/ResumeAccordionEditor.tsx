@@ -45,7 +45,7 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
     let cancelled = false;
     setLoading(true);
     api
-      .getResumeJson(item.pdfUrl)
+      .getResumeJson(item.slug)
       .then(data => {
         if (cancelled) return;
         setResolved(data);
@@ -60,7 +60,7 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.pdfUrl]);
+  }, [item.slug]);
 
   function update(patch: Partial<ResolvedResume>) {
     if (!resolved) return;
@@ -71,20 +71,6 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
     setExpanded(prev => (prev === key ? null : key));
     const el = document.getElementById(`accordion-${key}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  async function handleRepair() {
-    setStatus('Extraindo conteúdo do PDF... (pode levar até 1 minuto)');
-    setError(false);
-    try {
-      const { resolved: data } = await api.repairResume(item.slug);
-      setResolved(data);
-      setNotFound(false);
-      setStatus('');
-    } catch (err) {
-      setStatus(`Erro: ${(err as Error).message}`);
-      setError(true);
-    }
   }
 
   async function handleSave() {
@@ -141,13 +127,7 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
   if (notFound || !resolved) {
     return (
       <div className="p-6">
-        <p className="mb-3 max-w-[480px] text-sm text-ink-soft">
-          Esse currículo não tem dados estruturados salvos (foi adicionado como PDF, sem passar pelo sistema).
-        </p>
-        <Button variant="secondary" onClick={handleRepair}>
-          Extrair conteúdo e editar
-        </Button>
-        <StatusMessage error={error}>{status}</StatusMessage>
+        <p className="max-w-[480px] text-sm text-ink-soft">Esse currículo não foi encontrado.</p>
       </div>
     );
   }

@@ -11,6 +11,7 @@
     "dev": "concurrently -n server,client -c blue,magenta \"npm start\" \"npm run dev:client\""
   },
   "dependencies": {
+    "@puppeteer/browsers": "^3.0.6",
     "cross-spawn": "^7.0.6",
     "express": "^4.21.2",
     "firebase-admin": "^14.2.0",

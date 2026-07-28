@@ -11,9 +11,15 @@ const CHROME_CANDIDATES = [
 ];
 
 function findBrowserExecutable() {
+  // Em produção (Render), o Chrome vem baixado via @puppeteer/browsers no
+  // build, e o caminho é passado por essa variável — evita depender dos
+  // caminhos fixos do Windows abaixo, que só existem em dev local.
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
   const found = CHROME_CANDIDATES.find(p => fs.existsSync(p));
   if (!found) {
-    throw new Error('Nenhum navegador Chrome/Edge encontrado nos caminhos padrão do Windows. Instale um deles ou ajuste CHROME_CANDIDATES em scripts/build-resume.js.');
+    throw new Error('Nenhum navegador Chrome/Edge encontrado. Defina PUPPETEER_EXECUTABLE_PATH ou instale o Chrome/Edge nos caminhos padrão do Windows (CHROME_CANDIDATES em scripts/build-resume.js).');
   }
   return found;
 }
