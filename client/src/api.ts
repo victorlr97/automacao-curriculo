@@ -92,12 +92,10 @@ function normalizeResolvedResume(data: ResolvedResume): ResolvedResume {
   return { ...data, education, additionalEducation: data.additionalEducation || [], coverLetter: data.coverLetter || '' };
 }
 
-/** Busca o JSON estruturado ao lado do PDF (mesmo slug). Lança se não existir
- * (currículo adicionado manualmente, sem passar pelo sistema — ver repairResume). */
-export async function getResumeJson(pdfUrl: string): Promise<ResolvedResume> {
-  const res = await fetch(pdfUrl.replace(/\.pdf$/, '.json'), { headers: await authHeaders() });
-  if (!res.ok) throw new Error('not-found');
-  return normalizeResolvedResume(await res.json());
+/** Busca o JSON estruturado do currículo (Firestore, por slug). Lança se não existir. */
+export async function getResumeJson(slug: string): Promise<ResolvedResume> {
+  const data = await requestJson<ResolvedResume>(`/api/resumes/${encodeURIComponent(slug)}/json`);
+  return normalizeResolvedResume(data);
 }
 
 export function updateResume(slug: string, data: ResolvedResume & { fileName: string }): Promise<UpdateResumeResponse> {
@@ -121,8 +119,4 @@ export function generateScript(slug: string, videoInstructions: string): Promise
 
 export function generateCoverLetter(slug: string): Promise<{ coverLetter: string }> {
   return postJson(`/api/resumes/${encodeURIComponent(slug)}/cover-letter`, {});
-}
-
-export function repairResume(slug: string): Promise<{ ok: true; resolved: ResolvedResume }> {
-  return requestJson(`/api/resumes/${encodeURIComponent(slug)}/repair`, { method: 'POST' });
 }

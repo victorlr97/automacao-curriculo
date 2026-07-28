@@ -8,6 +8,9 @@ output/
 # Build do client (Vite gera tudo aqui via `npm run build`) — não versionar.
 public/
 
+# Chrome baixado pelo Puppeteer em produção (scripts/ensure-chrome.js).
+.chrome-cache/
+
 # Segredos e configuração de ambiente (chaves do Firebase, API keys, etc.).
 .env
 .env.*

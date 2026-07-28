@@ -54,7 +54,7 @@ export function useGenerateResume() {
       setEditVideoInstructions('');
       setScriptStatus('');
       setCoverLetterStatus('');
-      const resolvedResume = await api.getResumeJson(data.pdfUrl);
+      const resolvedResume = await api.getResumeJson(data.slug);
       setResolved(resolvedResume);
     } catch (err) {
       setStatus(`Erro: ${(err as Error).message}`);

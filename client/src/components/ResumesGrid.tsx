@@ -28,7 +28,7 @@ export function ResumesGrid({ items, onResumeMutated, onDelete }: ResumesGridPro
       if (requestedSlugs.current.has(item.slug)) return;
       requestedSlugs.current.add(item.slug);
       api
-        .getResumeJson(item.pdfUrl)
+        .getResumeJson(item.slug)
         .then(data => {
           if (!cancelled) setResolvedBySlug(prev => ({ ...prev, [item.slug]: data }));
         })
