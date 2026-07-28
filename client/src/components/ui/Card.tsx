@@ -10,7 +10,7 @@ export function Card({ title, children, className = '' }: CardProps) {
   return (
     <div className={`rounded-xl border border-border bg-white p-5 shadow-xs ${className}`}>
       {title && <h3 className="mb-3 border-b border-border pb-3 text-base font-bold">{title}</h3>}
-      {children}
+      <div className="flex flex-col gap-2">{children}</div>
     </div>
   );
 }
@@ -20,5 +20,5 @@ export function FieldGrid({ children }: { children: ReactNode }) {
 }
 
 export function Hint({ children }: { children: ReactNode }) {
-  return <p className="mb-4 text-[13px] leading-relaxed text-ink-soft">{children}</p>;
+  return <p className="text-[13px] leading-relaxed text-ink-soft">{children}</p>;
 }

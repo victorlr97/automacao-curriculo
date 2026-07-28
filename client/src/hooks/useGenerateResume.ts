@@ -28,6 +28,8 @@ export function useGenerateResume(profileId: string | null) {
   const [saving, setSaving] = useState(false);
   const [scriptGenerating, setScriptGenerating] = useState(false);
   const [scriptStatus, setScriptStatus] = useState('');
+  const [coverLetterGenerating, setCoverLetterGenerating] = useState(false);
+  const [coverLetterStatus, setCoverLetterStatus] = useState('');
 
   // Troca de perfil esconde o resultado gerado, mas mantém o que já estava
   // digitado nos campos (mesmo comportamento do app original).
@@ -61,6 +63,7 @@ export function useGenerateResume(profileId: string | null) {
       setEditFileName(data.slug);
       setEditVideoInstructions('');
       setScriptStatus('');
+      setCoverLetterStatus('');
       const resolvedResume = await api.getResumeJson(data.pdfUrl);
       setResolved(resolvedResume);
     } catch (err) {
@@ -112,6 +115,20 @@ export function useGenerateResume(profileId: string | null) {
     }
   }
 
+  async function handleGenerateCoverLetter() {
+    if (!resolved || !result || !profileId) return;
+    setCoverLetterGenerating(true);
+    setCoverLetterStatus('');
+    try {
+      const { coverLetter } = await api.generateCoverLetter(profileId, result.slug);
+      setResolved({ ...resolved, coverLetter });
+    } catch (err) {
+      setCoverLetterStatus(`Erro: ${(err as Error).message}`);
+    } finally {
+      setCoverLetterGenerating(false);
+    }
+  }
+
   return {
     jobDescription,
     setJobDescription,
@@ -135,9 +152,12 @@ export function useGenerateResume(profileId: string | null) {
     saving,
     scriptGenerating,
     scriptStatus,
+    coverLetterGenerating,
+    coverLetterStatus,
     handleSectionClick,
     handleBackToPreview,
     handleSave,
-    handleGenerateScript
+    handleGenerateScript,
+    handleGenerateCoverLetter
   };
 }

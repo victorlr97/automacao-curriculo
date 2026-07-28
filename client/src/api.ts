@@ -99,7 +99,7 @@ function normalizeResolvedResume(data: ResolvedResume): ResolvedResume {
     : rawEducation && typeof rawEducation === 'object'
       ? [rawEducation as ResolvedResume['education'][number]]
       : [];
-  return { ...data, education, additionalEducation: data.additionalEducation || [] };
+  return { ...data, education, additionalEducation: data.additionalEducation || [], coverLetter: data.coverLetter || '' };
 }
 
 /** Busca o JSON estruturado ao lado do PDF (mesmo slug). Lança se não existir
@@ -131,6 +131,10 @@ export function translateResume(profileId: string, slug: string): Promise<Transl
 
 export function generateScript(profileId: string, slug: string, videoInstructions: string): Promise<{ presentationScript: string }> {
   return postJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/script`), { videoInstructions });
+}
+
+export function generateCoverLetter(profileId: string, slug: string): Promise<{ coverLetter: string }> {
+  return postJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/cover-letter`), {});
 }
 
 export function repairResume(profileId: string, slug: string): Promise<{ ok: true; resolved: ResolvedResume }> {

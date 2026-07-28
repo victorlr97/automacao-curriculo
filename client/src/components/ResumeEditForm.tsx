@@ -23,6 +23,9 @@ interface ResumeEditFormProps {
   onGenerateScript: () => void;
   generatingScript: boolean;
   scriptStatus: string;
+  onGenerateCoverLetter: () => void;
+  generatingCoverLetter: boolean;
+  coverLetterStatus: string;
   onSave: () => void;
   saving: boolean;
 }
@@ -37,6 +40,9 @@ export function ResumeEditForm({
   onGenerateScript,
   generatingScript,
   scriptStatus,
+  onGenerateCoverLetter,
+  generatingCoverLetter,
+  coverLetterStatus,
   onSave,
   saving
 }: ResumeEditFormProps) {
@@ -81,10 +87,30 @@ export function ResumeEditForm({
         <StatusMessage error={Boolean(scriptStatus) && scriptStatus.startsWith('Erro')}>{scriptStatus}</StatusMessage>
       </Card>
 
+      <Card className="bg-[#fbfcfd]">
+        <TextArea
+          label="Carta de apresentação (até 500 caracteres)"
+          rows={5}
+          value={data.coverLetter}
+          onChange={v => update({ coverLetter: v })}
+        />
+        <p className={`mt-1 text-right text-xs ${data.coverLetter.length > 500 ? 'text-danger' : 'text-ink-faint'}`}>
+          {data.coverLetter.length}/500
+        </p>
+        <div className="mt-3">
+          <Button variant="secondary" onClick={onGenerateCoverLetter} disabled={generatingCoverLetter}>
+            {generatingCoverLetter ? 'Gerando carta...' : data.coverLetter ? 'Regenerar carta' : 'Gerar carta'}
+          </Button>
+        </div>
+        <StatusMessage error={Boolean(coverLetterStatus) && coverLetterStatus.startsWith('Erro')}>
+          {coverLetterStatus}
+        </StatusMessage>
+      </Card>
+
       <h4 id="section-experience" className="text-base font-bold">
         Experiências
       </h4>
-      <ExperienceFields items={data.experience} onChange={experience => update({ experience })} />
+      <ExperienceFields items={data.experience} onChange={experience => update({ experience })} language={data.language} />
 
       <h4 id="section-projects" className="text-base font-bold">
         Projetos
@@ -94,7 +120,7 @@ export function ResumeEditForm({
       <h4 id="section-education" className="text-base font-bold">
         Formação
       </h4>
-      <EducationFields items={data.education} onChange={education => update({ education })} />
+      <EducationFields items={data.education} onChange={education => update({ education })} language={data.language} />
 
       <h4 id="section-additionalEducation" className="text-base font-bold">
         Formação Complementar
@@ -109,7 +135,7 @@ export function ResumeEditForm({
       <h4 id="section-languages" className="text-base font-bold">
         Idiomas
       </h4>
-      <LanguagesFields items={data.languages} onChange={languages => update({ languages })} />
+      <LanguagesFields items={data.languages} onChange={languages => update({ languages })} language={data.language} />
 
       <div>
         <Button variant="primary" onClick={onSave} disabled={saving}>

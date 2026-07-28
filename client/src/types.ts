@@ -96,6 +96,7 @@ export interface ResolvedResume {
   skills: string[];
   languages: LanguageEntry[];
   presentationScript: string;
+  coverLetter: string;
   portfolio: Portfolio;
   fileLabel?: string;
 }
@@ -116,6 +117,7 @@ export interface GenerateResumeResponse {
   projectsChosen: string[];
   resumo: string;
   presentationScript: string;
+  coverLetter: string;
   pdfUrl: string;
 }
 

@@ -64,6 +64,7 @@ export function GeneratePanel({ generator }: GeneratePanelProps) {
             <SummaryField label="Resumo" value={result.resumo} />
           </dl>
           {result.presentationScript && <ScriptBlock script={result.presentationScript} />}
+          {result.coverLetter && <ScriptBlock script={result.coverLetter} title="Carta de apresentação" />}
         </div>
       )}
     </div>

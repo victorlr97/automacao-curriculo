@@ -36,6 +36,8 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
   const [saving, setSaving] = useState(false);
   const [scriptGenerating, setScriptGenerating] = useState(false);
   const [scriptStatus, setScriptStatus] = useState('');
+  const [coverLetterGenerating, setCoverLetterGenerating] = useState(false);
+  const [coverLetterStatus, setCoverLetterStatus] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -119,6 +121,20 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
     }
   }
 
+  async function handleGenerateCoverLetter() {
+    if (!resolved) return;
+    setCoverLetterGenerating(true);
+    setCoverLetterStatus('');
+    try {
+      const { coverLetter } = await api.generateCoverLetter(profileId, slug);
+      update({ coverLetter });
+    } catch (err) {
+      setCoverLetterStatus(`Erro: ${(err as Error).message}`);
+    } finally {
+      setCoverLetterGenerating(false);
+    }
+  }
+
   if (loading) {
     return <p className="p-6 text-sm text-ink-soft">Carregando...</p>;
   }
@@ -159,7 +175,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
           open={expanded === 'experience'}
           onToggle={() => toggle('experience')}
         >
-          <ExperienceFields items={resolved.experience} onChange={experience => update({ experience })} />
+          <ExperienceFields items={resolved.experience} onChange={experience => update({ experience })} language={resolved.language} />
         </AccordionSection>
 
         <AccordionSection
@@ -179,7 +195,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
           open={expanded === 'education'}
           onToggle={() => toggle('education')}
         >
-          <EducationFields items={resolved.education} onChange={education => update({ education })} />
+          <EducationFields items={resolved.education} onChange={education => update({ education })} language={resolved.language} />
         </AccordionSection>
 
         <AccordionSection
@@ -212,7 +228,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
           open={expanded === 'languages'}
           onToggle={() => toggle('languages')}
         >
-          <LanguagesFields items={resolved.languages} onChange={languages => update({ languages })} />
+          <LanguagesFields items={resolved.languages} onChange={languages => update({ languages })} language={resolved.language} />
         </AccordionSection>
 
         <AccordionSection id="script" title="Texto de apresentação (vídeo)" open={expanded === 'script'} onToggle={() => toggle('script')}>
@@ -232,6 +248,29 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
             value={resolved.presentationScript}
             onChange={v => update({ presentationScript: v })}
           />
+        </AccordionSection>
+
+        <AccordionSection
+          id="coverLetter"
+          title="Carta de apresentação"
+          open={expanded === 'coverLetter'}
+          onToggle={() => toggle('coverLetter')}
+        >
+          <Button variant="secondary" onClick={handleGenerateCoverLetter} disabled={coverLetterGenerating}>
+            {coverLetterGenerating ? 'Gerando carta...' : resolved.coverLetter ? 'Regenerar carta' : 'Gerar carta'}
+          </Button>
+          <StatusMessage error={Boolean(coverLetterStatus) && coverLetterStatus.startsWith('Erro')}>
+            {coverLetterStatus}
+          </StatusMessage>
+          <TextArea
+            label="Carta de apresentação (até 500 caracteres)"
+            rows={6}
+            value={resolved.coverLetter}
+            onChange={v => update({ coverLetter: v })}
+          />
+          <p className={`mt-1 text-right text-xs ${resolved.coverLetter.length > 500 ? 'text-danger' : 'text-ink-faint'}`}>
+            {resolved.coverLetter.length}/500
+          </p>
         </AccordionSection>
 
         <div className="sticky bottom-0 border-t border-border bg-white py-3">

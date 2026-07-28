@@ -27,13 +27,18 @@ export function ProjectsSection({ db, onChange }: SectionProps) {
         pra cada vaga.
       </Hint>
       {projects.items.map((proj, idx) => (
-        <CollapsibleEntry key={idx} title={proj.name || `Projeto ${idx + 1}`} onRemove={() => projects.removeAt(idx)}>
+        <CollapsibleEntry
+          key={idx}
+          title={proj.name || `Projeto ${idx + 1}`}
+          subtitle={proj.stack.join(', ')}
+          onRemove={() => projects.removeAt(idx)}
+        >
           <TextField
             label="Nome"
             value={proj.name}
             onChange={v => projects.updateAt(idx, { name: v, id: slugify(v) })}
           />
-          <StackField label="Stack (separado por vírgula)" items={proj.stack} onChange={stack => projects.updateAt(idx, { stack })} />
+          <StackField label="Ferramentas / Tecnologias (separado por vírgula)" items={proj.stack} onChange={stack => projects.updateAt(idx, { stack })} />
           <LinesField label="Fatos (um por linha)" items={proj.facts} onChange={facts => projects.updateAt(idx, { facts })} />
         </CollapsibleEntry>
       ))}

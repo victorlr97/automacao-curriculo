@@ -67,15 +67,21 @@
   --shadow-elevated: 0 8px 24px -6px rgba(20, 23, 28, 0.16), 0 2px 6px rgba(20, 23, 28, 0.06);
 }
 
-body {
-  font-family: var(--font-body);
-  background: var(--color-bg);
-  color: var(--color-ink-2);
-  -webkit-font-smoothing: antialiased;
-}
+/* Em @layer base pra ter prioridade MENOR que as classes utilitárias do
+   Tailwind (ex: text-accent num <h2>) — fora de layer, regras CSS "vencem"
+   qualquer coisa em @layer independente de especificidade, o que travava a
+   cor customizada de qualquer h1-h4. */
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background: var(--color-bg);
+    color: var(--color-ink-2);
+    -webkit-font-smoothing: antialiased;
+  }
 
-h1, h2, h3, h4 {
-  color: var(--color-ink);
+  h1, h2, h3, h4 {
+    color: var(--color-ink);
+  }
 }
 
 ::selection {

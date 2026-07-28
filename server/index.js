@@ -4,7 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const { PDFParse } = require('pdf-parse');
 const { exec } = require('child_process');
-const { generateResumeData, importResumeFromText, importDatabaseFromText, translateResume, generatePresentationScript } = require('./claude-engine');
+const { generateResumeData, importResumeFromText, importDatabaseFromText, translateResume, generatePresentationScript, generateCoverLetter } = require('./claude-engine');
 const { buildResume } = require('../scripts/build-resume');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -233,6 +233,7 @@ app.post('/api/profiles/:profileId/generate', async (req, res) => {
       projectsChosen: resolved.projects.map(p => p.name),
       resumo: meta.resumo,
       presentationScript: resolved.presentationScript || '',
+      coverLetter: resolved.coverLetter || '',
       pdfUrl: `/output/${req.profileId}/${slug}.pdf`
     });
   } catch (err) {
@@ -411,6 +412,25 @@ app.post('/api/profiles/:profileId/resumes/:slug/script', async (req, res) => {
     const resolved = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     const presentationScript = await generatePresentationScript(resolved, videoInstructions);
     res.json({ presentationScript });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Gera (ou regenera) só a carta de apresentação pra um currículo já existente.
+// Mesmo padrão da rota /script acima: não salva no disco, só devolve o texto
+// pro usuário revisar/editar antes de clicar em Salvar.
+app.post('/api/profiles/:profileId/resumes/:slug/cover-letter', async (req, res) => {
+  const slug = path.basename(req.params.slug);
+  try {
+    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    if (!fs.existsSync(jsonPath)) {
+      res.status(404).json({ error: 'Currículo não encontrado.' });
+      return;
+    }
+    const resolved = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const coverLetter = await generateCoverLetter(resolved);
+    res.json({ coverLetter });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
