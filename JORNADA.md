@@ -41,16 +41,28 @@ Validação: o fluxo completo foi testado via API REST do Firebase Auth (criaç�
 
 Migração dos dados reais: escrito um script de uso único (`scripts/migrate-profile-to-firestore.js`) que lê o `database.json` antigo de um perfil e grava no Firestore sob o `uid` da conta nova, além de renomear a pasta de currículos gerados de `output/<profileId>/` pra `output/<uid>/`. Rodado com a conta real, dados confirmados no app.
 
-## Fase 2 — hospedagem (em andamento)
+## Fase 2 — hospedagem
 
 O app tem duas dependências incomuns pra hospedagem: precisa de um Chrome de verdade rodando (Puppeteer, pra gerar o PDF) e da CLI do Claude Code autenticada com uma assinatura pessoal, não a API paga por token. Isso descarta hospedagens serverless/edge tradicionais (não rodam processo persistente nem spawnam CLI).
 
-Três rotas avaliadas até agora:
-- Rodar no próprio PC com um túnel gratuito (Cloudflare Tunnel) — custo zero, sem cadastro novo, mas só fica no ar com o PC ligado.
-- Oracle Cloud Free Tier (VPS) — no ar 24/7 independente do PC, recursos "Always Free" que não cobram nunca (cartão exigido só pra verificação de identidade), mas mais trabalho de infra: adaptar de Windows pra Linux, reautenticar ou copiar a sessão da CLI.
-- Cloud Run (dentro do ecossistema Firebase) — também 24/7, mas exige colocar o projeto no plano pago Blaze (cartão com risco real de cobrança acima da cota gratuita) e migrar os PDFs pro Storage antes, já que o disco lá é efêmero.
+Rotas avaliadas, nessa ordem, cada uma descartada por um motivo diferente:
+- Rodar no próprio PC com um túnel gratuito (Cloudflare Tunnel) — custo zero, mas só fica no ar com o PC ligado. Descartada porque o objetivo virou "sempre online".
+- Oracle Cloud Free Tier (VPS) — no ar 24/7, recursos "Always Free" que não cobram nunca. Descartada por exigir mais trabalho de infra (Linux, firewall, HTTPS manual) que a alternativa abaixo, pra um objetivo que é principalmente demonstrativo.
+- Render — ficou inviável enquanto os PDFs dependiam de disco local (o disco do Render não sobrevive a um redeploy). Isso só deixou de ser um problema depois de decidir mover os currículos gerados pro Firebase (Firestore + Storage) — o que também tornou o Render viável de vez, sem precisar resolver os problemas de infra da Oracle.
 
-Decisão ainda em aberto no momento desse registro.
+Correção no meio do caminho: a informação inicial de que o Firebase Storage seria gratuito no plano Spark estava desatualizada — desde 3/fev/2026 o Storage exige o plano pago Blaze pra qualquer bucket, mesmo dentro da cota gratuita do Google Cloud Storage. Verificado por busca antes de seguir, e corrigido explicitamente com o usuário antes de continuar. Decisão: aceitar cadastrar cartão, com uso real esperado em $0 e um alerta de orçamento como rede de segurança.
+
+Implementação:
+- Currículos gerados (antes `output/<uid>/*.json` e `.pdf` em disco) migraram pra `users/{uid}/resumes/{slug}` no Firestore (metadados) + `resumes/{uid}/{slug}.pdf` no Storage (binário). O PDF é renderizado num diretório temporário só durante a geração e descartado depois de subir pro Storage.
+- PDFs voltam pro client como signed URL do Storage (expira em 1h), não mais como caminho estático do servidor — isso também evitou o problema de um link `<a href>` não conseguir mandar o header de autenticação.
+- Ajustes de ambiente pra sair do Windows: porta via `process.env.PORT`, bind em `0.0.0.0`, abertura automática do navegador condicionada a `process.platform === 'win32'`, Chrome do Puppeteer buscado via `@puppeteer/browsers` (baixa um binário compatível na primeira execução) em vez dos caminhos fixos do Windows.
+- CLI do Claude Code instalada no build do Render (`npm install -g @anthropic-ai/claude-code`) e autenticada copiando a sessão local (`~/.claude/.credentials.json`) como Secret File do Render pro lugar esperado, em vez de um login interativo (que não existe num ambiente headless).
+
+Validação: gerado um currículo real (Chrome + CLI do Claude + upload pro Storage) contra a URL pública do Render usando uma conta de teste descartável, confirmando o PDF acessível pela signed URL — conta e dados removidos depois.
+
+Resultado: o primeiro deploy subiu sem erros — os pontos mais arriscados (caminho de montagem dos Secret Files, download do Chrome, PORT dinâmica) funcionaram de primeira.
+
+Pendência conhecida, não resolvida ainda: o cadastro na URL pública está aberto pra qualquer e-mail. A intenção original de manter isso fechado (a CLI roda sob a assinatura pessoal, uso público descontrolado pode estourar limite) continua de pé — falta implementar a restrição antes de divulgar o link amplamente.
 
 ## Problemas e soluções (resumo)
 
@@ -62,8 +74,11 @@ Decisão ainda em aberto no momento desse registro.
 | Sem conta de usuário — dados acessíveis por qualquer um que soubesse o `profileId` | Firebase Auth + Firestore, dono dos dados derivado do token verificado no servidor |
 | `firebase-admin` v14 quebrou a API usada nos exemplos comuns (`admin.credential.cert`) | Reescrito pra API modular (`firebase-admin/app`, `/auth`, `/firestore`) |
 | Processo Node antigo segurando a porta durante teste | Identificado e encerrado via `Get-NetTCPConnection` |
-| Hospedagem precisa de Chrome + CLI autenticada, o que exclui serverless/edge | Em avaliação: self-host com túnel vs. Oracle Free Tier vs. Cloud Run |
+| Hospedagem precisa de Chrome + CLI autenticada, o que exclui serverless/edge | Render, com Chrome baixado via `@puppeteer/browsers` e sessão da CLI injetada por Secret File |
+| Disco do Render não sobrevive a redeploy — quebra a galeria de currículos | Currículos gerados migrados pra Firestore (metadados) + Storage (PDF) |
+| Informação errada sobre o Storage ser gratuito no Spark | Verificado por busca, corrigido com o usuário, upgrade consciente pro Blaze |
+| Link `<a href>` de PDF não manda header de autenticação | PDF servido via signed URL do Storage, não mais rota autenticada própria |
 
 ## Status atual
 
-Fase 1 concluída e em uso com dados reais. Fase 2 (hospedagem) em decisão.
+Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com, testado ponta a ponta. Pendência: restringir o cadastro antes de divulgar o link.

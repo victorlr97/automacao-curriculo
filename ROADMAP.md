@@ -24,19 +24,22 @@
 - [x] Configurar Firebase Auth (e-mail/senha)
 - [x] Modelar Firestore — ajustado em relação ao plano original: como virou 1 conta = 1 perfil, o documento `users/{uid}` guarda o banco de fatos direto, sem subcoleções `profiles`/`resumes`
 - [x] Migrar leitura/escrita do `database.json` local para Firestore
-- [ ] Migrar armazenamento dos PDFs gerados para Firebase Storage — adiado de propósito pra Fase 2; por enquanto PDFs continuam em `output/<uid>/` local, isolados por conta via o middleware de autenticação
+- [x] Migrar armazenamento dos PDFs gerados para Firebase Storage — feito na Fase 2 (ver abaixo), não ficou de fora como o plano original previa
 - [x] Middleware de autenticação no Express (verificar token Firebase nas rotas `/api`)
 - [x] Atualizar client para fluxo de login/logout
 
-### Fase 2 — Deploy (beta fechado)
-- [ ] Escolher hospedagem (precisa suportar Puppeteer + spawn de processo CLI)
-- [ ] `server/index.js` — bindar em `0.0.0.0` em vez de `127.0.0.1` (linha ~468)
-- [ ] `server/index.js` — ler porta de `process.env.PORT` em vez de fixa em 5175 (linha ~15)
-- [ ] `server/index.js` — condicionar o auto-open do navegador (`exec('start ...')`, linha ~471) a ambiente local, hoje é comando Windows-only
-- [ ] `scripts/build-resume.js` — `CHROME_CANDIDATES` só tem caminhos Windows; adaptar pro Chromium do ambiente de produção (Linux) ou path via variável de ambiente
-- [ ] Configurar variáveis de ambiente/segredos
-- [ ] Restringir acesso (allowlist de e-mail/convite, não link público)
-- [ ] Acompanhar uso da assinatura Claude Code pra não estourar limite
+### Fase 2 — Deploy — concluída em 2026-07-28 (com uma pendência)
+- [x] Escolher hospedagem — **Render**, não Oracle como cogitado inicialmente (menos trabalho de infra depois que os PDFs migraram pro Firebase Storage, que passou a ser necessário pelo disco efêmero do Render)
+- [x] `server/index.js` — porta via `process.env.PORT`, bind em `0.0.0.0`
+- [x] `server/index.js` — auto-open do navegador condicionado a `process.platform === 'win32'`
+- [x] `scripts/build-resume.js` — Chrome via `@puppeteer/browsers` (`scripts/ensure-chrome.js`), com fallback pros caminhos do Windows em dev local
+- [x] Currículos gerados migrados de disco local pra Firestore (`users/{uid}/resumes/{slug}`) + Storage (`resumes/{uid}/{slug}.pdf`, servido via signed URL)
+- [x] Variáveis de ambiente e segredos configurados no Render (Secret Files pra chave da Admin SDK e sessão da CLI do Claude)
+- [x] Testado ponta a ponta em produção: login, banco de fatos, geração de currículo com IA, PDF — tudo via conta de teste descartável
+- [ ] **Restringir acesso (allowlist de e-mail/convite)** — ainda não feito. Hoje `https://automacao-curriculo.onrender.com` tem cadastro aberto pra qualquer e-mail; a razão original de manter isso fechado (a CLI do Claude roda sob a assinatura pessoal, um uso público sem controle pode estourar limite) continua valendo. Fica como próximo passo antes de compartilhar o link amplamente.
+- [ ] Acompanhar uso da assinatura Claude Code pra não estourar limite — sem automação, é acompanhar manualmente por enquanto.
+
+Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.md](JORNADA.md).
 
 ### Fase 3 — Fluxo de IA no n8n
 - [ ] Desenhar o fluxo (leitura dos fatos → geração dos campos → validação → render do PDF)
@@ -54,4 +57,4 @@
 
 ## Status
 
-Fase 1 concluída (login por e-mail/senha + Firestore em produção no Firebase). Próximo passo é a Fase 2 (deploy em beta fechado).
+Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com. Pendência de segurança antes de divulgar o link: restringir o cadastro (hoje está aberto). Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n).
