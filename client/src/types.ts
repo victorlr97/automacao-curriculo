@@ -1,10 +1,5 @@
 export type Language = 'pt' | 'en';
 
-export interface Profile {
-  id: string;
-  name: string;
-}
-
 export interface PersonalInfo {
   name: string;
   age: number;

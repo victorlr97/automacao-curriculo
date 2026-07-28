@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import * as api from '../api';
 import { useConfirm } from '../context/ConfirmContext';
-import { useProfile } from '../context/ProfileContext';
 import type { ResumeListItem } from '../types';
 import { ResumesGrid } from './ResumesGrid';
 import { StatusMessage } from './ui/StatusMessage';
 import { inputClasses } from './ui/TextField';
 
 export function OutputsTab() {
-  const { currentProfileId } = useProfile();
   const confirm = useConfirm();
   const [items, setItems] = useState<ResumeListItem[]>([]);
   const [importFileName, setImportFileName] = useState('');
@@ -17,9 +15,8 @@ export function OutputsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadResumes = useCallback(async () => {
-    if (!currentProfileId) return [];
     try {
-      const data = await api.getResumes(currentProfileId);
+      const data = await api.getResumes();
       setItems(data);
       return data;
     } catch (err) {
@@ -27,7 +24,7 @@ export function OutputsTab() {
       setImportError(true);
       return [];
     }
-  }, [currentProfileId]);
+  }, []);
 
   useEffect(() => {
     loadResumes();
@@ -38,7 +35,6 @@ export function OutputsTab() {
   }
 
   async function handleDelete(item: ResumeListItem) {
-    if (!currentProfileId) return;
     const proceed = await confirm({
       title: 'Excluir currículo',
       message: `Excluir "${item.title}"? Essa ação não pode ser desfeita.`,
@@ -46,17 +42,17 @@ export function OutputsTab() {
       danger: true
     });
     if (!proceed) return;
-    await api.deleteResume(currentProfileId, item.slug);
+    await api.deleteResume(item.slug);
     await loadResumes();
   }
 
   async function handleImportChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !currentProfileId) return;
+    if (!file) return;
     setImportStatus('Importando... (pode levar até 1 minuto)');
     setImportError(false);
     try {
-      const data = await api.importResumeFromPdf(currentProfileId, file, importFileName.trim());
+      const data = await api.importResumeFromPdf(file, importFileName.trim());
       setImportStatus(`Importado: "${data.title}"`);
       await loadResumes();
     } catch (err) {
@@ -86,9 +82,7 @@ export function OutputsTab() {
         </label>
         <StatusMessage error={importError}>{importStatus}</StatusMessage>
       </div>
-      {currentProfileId && (
-        <ResumesGrid profileId={currentProfileId} items={items} onResumeMutated={handleResumeMutated} onDelete={handleDelete} />
-      )}
+      <ResumesGrid items={items} onResumeMutated={handleResumeMutated} onDelete={handleDelete} />
     </div>
   );
 }

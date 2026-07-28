@@ -40,7 +40,7 @@ export const DATABASE_SECTIONS: SectionDef[] = [
 /** Toda a lógica do Editor do Banco (carregar, salvar, descartar, importar
  * PDF), extraída pra ser reaproveitada como a coluna esquerda do workspace
  * unificado. Comportamento idêntico ao que já existia. */
-export function useDatabaseEditor(profileId: string | null) {
+export function useDatabaseEditor() {
   const confirm = useConfirm();
   const [db, setDb] = useState<ProfileDatabase | null>(null);
   const [activeSection, setActiveSection] = useState(DATABASE_SECTIONS[0].key);
@@ -52,8 +52,7 @@ export function useDatabaseEditor(profileId: string | null) {
   const [importError, setImportError] = useState(false);
 
   async function loadDatabase() {
-    if (!profileId) return;
-    const data = await api.getDatabase(profileId);
+    const data = await api.getDatabase();
     setDb(normalizeDatabase(data));
     setActiveSection(DATABASE_SECTIONS[0].key);
     setReloadKey(k => k + 1);
@@ -62,15 +61,15 @@ export function useDatabaseEditor(profileId: string | null) {
   useEffect(() => {
     loadDatabase();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileId]);
+  }, []);
 
   async function handleSave() {
-    if (!profileId || !db) return;
+    if (!db) return;
     setSaving(true);
     setStatus('Salvando...');
     setError(false);
     try {
-      await api.saveDatabase(profileId, db);
+      await api.saveDatabase(db);
       setStatus('Alterações salvas com sucesso.');
     } catch (err) {
       setStatus(`Erro: ${(err as Error).message}`);
@@ -88,7 +87,7 @@ export function useDatabaseEditor(profileId: string | null) {
 
   async function handleImportChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !profileId) return;
+    if (!file) return;
 
     if (db && databaseHasContent(db)) {
       const proceed = await confirm({
@@ -106,7 +105,7 @@ export function useDatabaseEditor(profileId: string | null) {
     setImportStatus('Extraindo fatos do PDF... (pode levar até 1 minuto)');
     setImportError(false);
     try {
-      const data = await api.importDatabaseFromPdf(profileId, file);
+      const data = await api.importDatabaseFromPdf(file);
       const normalized = normalizeDatabase(data);
       setDb(normalized);
       setActiveSection(DATABASE_SECTIONS[0].key);

@@ -1,5 +1,4 @@
 import { RotateCcw, Save, Upload } from 'lucide-react';
-import { useProfile } from '../context/ProfileContext';
 import { DATABASE_SECTIONS, useDatabaseEditor } from '../hooks/useDatabaseEditor';
 import { Button } from './ui/Button';
 import { StatusMessage } from './ui/StatusMessage';
@@ -8,8 +7,7 @@ import { StatusMessage } from './ui/StatusMessage';
  * como a coluna esquerda da tela "Currículo", disputando espaço com a prévia
  * e o formulário de geração. Aqui tem a largura toda pra respirar. */
 export function DatabaseEditorTab() {
-  const { currentProfileId } = useProfile();
-  const editor = useDatabaseEditor(currentProfileId);
+  const editor = useDatabaseEditor();
   const {
     db,
     setDb,

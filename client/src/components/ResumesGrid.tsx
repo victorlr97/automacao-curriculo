@@ -7,7 +7,6 @@ import { Modal } from './ui/Modal';
 import { StatusMessage } from './ui/StatusMessage';
 
 interface ResumesGridProps {
-  profileId: string;
   items: ResumeListItem[];
   onResumeMutated: (newSlug: string) => Promise<void>;
   onDelete: (item: ResumeListItem) => void;
@@ -16,7 +15,7 @@ interface ResumesGridProps {
 /** Grid de cards (thumbnail + título/cargo + ações) no lugar da antiga lista +
  * painel lateral. Clicar na miniatura ou em "Editar" abrem o mesmo editor em
  * acordeão com prévia ao vivo. */
-export function ResumesGrid({ profileId, items, onResumeMutated, onDelete }: ResumesGridProps) {
+export function ResumesGrid({ items, onResumeMutated, onDelete }: ResumesGridProps) {
   const [resolvedBySlug, setResolvedBySlug] = useState<Record<string, ResolvedResume | null>>({});
   const [translatingSlug, setTranslatingSlug] = useState<string | null>(null);
   const [translateError, setTranslateError] = useState('');
@@ -46,7 +45,7 @@ export function ResumesGrid({ profileId, items, onResumeMutated, onDelete }: Res
     setTranslatingSlug(item.slug);
     setTranslateError('');
     try {
-      const res = await api.translateResume(profileId, item.slug);
+      const res = await api.translateResume(item.slug);
       await onResumeMutated(res.slug);
     } catch (err) {
       setTranslateError(`Erro ao traduzir "${item.title}": ${(err as Error).message}`);
@@ -83,12 +82,7 @@ export function ResumesGrid({ profileId, items, onResumeMutated, onDelete }: Res
 
       <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title={editingItem?.title ?? ''} size="full">
         {editingItem && (
-          <ResumeAccordionEditor
-            key={editingItem.slug}
-            profileId={profileId}
-            item={editingItem}
-            onResumeMutated={onResumeMutated}
-          />
+          <ResumeAccordionEditor key={editingItem.slug} item={editingItem} onResumeMutated={onResumeMutated} />
         )}
       </Modal>
     </>

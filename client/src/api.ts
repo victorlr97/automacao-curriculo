@@ -1,8 +1,8 @@
+import { auth } from './lib/firebase';
 import type {
   ApiErrorBody,
   GenerateResumeResponse,
   ImportResumeResponse,
-  Profile,
   ProfileDatabase,
   ResolvedResume,
   ResumeListItem,
@@ -10,12 +10,16 @@ import type {
   UpdateResumeResponse
 } from './types';
 
-function profileUrl(profileId: string, suffix: string): string {
-  return `/api/profiles/${encodeURIComponent(profileId)}${suffix}`;
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await auth.currentUser?.getIdToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { ...(await authHeaders()), ...(init.headers || {}) }
+  });
   const data = await res.json();
   if (!res.ok) throw new Error((data as ApiErrorBody).error || 'Erro desconhecido.');
   return data as T;
@@ -37,34 +41,20 @@ function putJson<T>(url: string, body: unknown): Promise<T> {
   });
 }
 
-// ---------- Perfis ----------
-
-export function getProfiles(): Promise<Profile[]> {
-  return requestJson('/api/profiles');
-}
-
-export function createProfile(name: string): Promise<Profile> {
-  return postJson('/api/profiles', { name });
-}
-
-export function deleteProfile(profileId: string): Promise<{ ok: true }> {
-  return requestJson(`/api/profiles/${encodeURIComponent(profileId)}`, { method: 'DELETE' });
-}
-
 // ---------- Banco de dados (Editor do Banco) ----------
 
-export function getDatabase(profileId: string): Promise<ProfileDatabase> {
-  return requestJson(profileUrl(profileId, '/database'));
+export function getDatabase(): Promise<ProfileDatabase> {
+  return requestJson('/api/database');
 }
 
-export function saveDatabase(profileId: string, db: ProfileDatabase): Promise<{ ok: true }> {
-  return putJson(profileUrl(profileId, '/database'), db);
+export function saveDatabase(db: ProfileDatabase): Promise<{ ok: true }> {
+  return putJson('/api/database', db);
 }
 
-export function importDatabaseFromPdf(profileId: string, file: File): Promise<ProfileDatabase> {
+export function importDatabaseFromPdf(file: File): Promise<ProfileDatabase> {
   const formData = new FormData();
   formData.append('resume', file);
-  return requestJson(profileUrl(profileId, '/database/import'), { method: 'POST', body: formData });
+  return requestJson('/api/database/import', { method: 'POST', body: formData });
 }
 
 // ---------- Gerar currículo ----------
@@ -75,18 +65,18 @@ export interface GenerateResumePayload {
   fileName: string;
 }
 
-export function generateResume(profileId: string, payload: GenerateResumePayload): Promise<GenerateResumeResponse> {
-  return postJson(profileUrl(profileId, '/generate'), payload);
+export function generateResume(payload: GenerateResumePayload): Promise<GenerateResumeResponse> {
+  return postJson('/api/resumes/generate', payload);
 }
 
 // ---------- Meus Currículos ----------
 
-export function getResumes(profileId: string): Promise<ResumeListItem[]> {
-  return requestJson(profileUrl(profileId, '/resumes'));
+export function getResumes(): Promise<ResumeListItem[]> {
+  return requestJson('/api/resumes');
 }
 
-export function deleteResume(profileId: string, slug: string): Promise<{ ok: true }> {
-  return requestJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}`), { method: 'DELETE' });
+export function deleteResume(slug: string): Promise<{ ok: true }> {
+  return requestJson(`/api/resumes/${encodeURIComponent(slug)}`, { method: 'DELETE' });
 }
 
 // "education" passou de objeto único pra lista (pra suportar graduação +
@@ -105,38 +95,34 @@ function normalizeResolvedResume(data: ResolvedResume): ResolvedResume {
 /** Busca o JSON estruturado ao lado do PDF (mesmo slug). Lança se não existir
  * (currículo adicionado manualmente, sem passar pelo sistema — ver repairResume). */
 export async function getResumeJson(pdfUrl: string): Promise<ResolvedResume> {
-  const res = await fetch(pdfUrl.replace(/\.pdf$/, '.json'));
+  const res = await fetch(pdfUrl.replace(/\.pdf$/, '.json'), { headers: await authHeaders() });
   if (!res.ok) throw new Error('not-found');
   return normalizeResolvedResume(await res.json());
 }
 
-export function updateResume(
-  profileId: string,
-  slug: string,
-  data: ResolvedResume & { fileName: string }
-): Promise<UpdateResumeResponse> {
-  return putJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}`), data);
+export function updateResume(slug: string, data: ResolvedResume & { fileName: string }): Promise<UpdateResumeResponse> {
+  return putJson(`/api/resumes/${encodeURIComponent(slug)}`, data);
 }
 
-export function importResumeFromPdf(profileId: string, file: File, fileName: string): Promise<ImportResumeResponse> {
+export function importResumeFromPdf(file: File, fileName: string): Promise<ImportResumeResponse> {
   const formData = new FormData();
   formData.append('resume', file);
   formData.append('fileName', fileName);
-  return requestJson(profileUrl(profileId, '/resumes/import'), { method: 'POST', body: formData });
+  return requestJson('/api/resumes/import', { method: 'POST', body: formData });
 }
 
-export function translateResume(profileId: string, slug: string): Promise<TranslateResumeResponse> {
-  return requestJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/translate`), { method: 'POST' });
+export function translateResume(slug: string): Promise<TranslateResumeResponse> {
+  return requestJson(`/api/resumes/${encodeURIComponent(slug)}/translate`, { method: 'POST' });
 }
 
-export function generateScript(profileId: string, slug: string, videoInstructions: string): Promise<{ presentationScript: string }> {
-  return postJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/script`), { videoInstructions });
+export function generateScript(slug: string, videoInstructions: string): Promise<{ presentationScript: string }> {
+  return postJson(`/api/resumes/${encodeURIComponent(slug)}/script`, { videoInstructions });
 }
 
-export function generateCoverLetter(profileId: string, slug: string): Promise<{ coverLetter: string }> {
-  return postJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/cover-letter`), {});
+export function generateCoverLetter(slug: string): Promise<{ coverLetter: string }> {
+  return postJson(`/api/resumes/${encodeURIComponent(slug)}/cover-letter`, {});
 }
 
-export function repairResume(profileId: string, slug: string): Promise<{ ok: true; resolved: ResolvedResume }> {
-  return requestJson(profileUrl(profileId, `/resumes/${encodeURIComponent(slug)}/repair`), { method: 'POST' });
+export function repairResume(slug: string): Promise<{ ok: true; resolved: ResolvedResume }> {
+  return requestJson(`/api/resumes/${encodeURIComponent(slug)}/repair`, { method: 'POST' });
 }
