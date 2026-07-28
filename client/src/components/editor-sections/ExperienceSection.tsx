@@ -21,7 +21,7 @@ export function ExperienceSection({ db, onChange }: SectionProps) {
   const experience = makeListEditor(db.experience, next => onChange({ ...db, experience: next }));
 
   return (
-    <Card title="Experiências">
+    <Card title="Experiências" icon={Building2} tone="teal">
       <Hint>
         Fatos brutos de cada experiência — um por linha. A IA escolhe quais manter e reescreve a descrição final pra
         cada vaga; nenhum currículo gerado usa esses fatos literalmente.

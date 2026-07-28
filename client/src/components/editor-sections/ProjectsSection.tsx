@@ -1,3 +1,4 @@
+import { FolderKanban } from 'lucide-react';
 import type { ProfileDatabase, ProjectFact } from '../../types';
 import { makeListEditor } from '../../listEditor';
 import { slugify } from '../../utils';
@@ -21,7 +22,7 @@ export function ProjectsSection({ db, onChange }: SectionProps) {
   const projects = makeListEditor(db.projects, next => onChange({ ...db, projects: next }));
 
   return (
-    <Card title="Projetos">
+    <Card title="Projetos" icon={FolderKanban} tone="teal">
       <Hint>
         Fatos brutos de cada projeto — um por linha. A IA escolhe quais projetos entram e reescreve a descrição final
         pra cada vaga.

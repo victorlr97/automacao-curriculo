@@ -14,10 +14,10 @@ export function RemoveButton({ label, className = '', ...rest }: RemoveButtonPro
       <button
         type="button"
         title="Remover"
-        className={`shrink-0 rounded-md p-1.5 text-ink-faint transition-colors duration-150 hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${className}`}
+        className={`shrink-0 rounded-md p-2 text-ink-faint transition-colors duration-150 hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${className}`}
         {...rest}
       >
-        <Trash2 size={14} />
+        <Trash2 size={15} />
       </button>
     );
   }
@@ -25,7 +25,7 @@ export function RemoveButton({ label, className = '', ...rest }: RemoveButtonPro
   return (
     <button
       type="button"
-      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-danger transition-colors duration-150 hover:bg-danger-soft disabled:cursor-not-allowed disabled:text-ink-faint disabled:hover:bg-transparent ${className}`}
+      className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold text-danger transition-colors duration-150 hover:bg-danger-soft disabled:cursor-not-allowed disabled:text-ink-faint disabled:hover:bg-transparent ${className}`}
       {...rest}
     >
       {label}

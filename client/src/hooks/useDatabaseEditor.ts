@@ -1,7 +1,10 @@
+import { Award, BookOpen, Building2, FolderKanban, GraduationCap, Languages, Link2, Sparkles, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent, type ReactElement } from 'react';
 import * as api from '../api';
 import { useConfirm } from '../context/ConfirmContext';
 import { databaseHasContent, normalizeDatabase } from '../normalizeDatabase';
+import type { Tone } from '../theme';
 import type { ProfileDatabase } from '../types';
 import { AdditionalEducationSection } from '../components/editor-sections/AdditionalEducationSection';
 import { BackgroundSection } from '../components/editor-sections/BackgroundSection';
@@ -16,25 +19,64 @@ import { SkillsSection } from '../components/editor-sections/SkillsSection';
 export interface SectionDef {
   key: string;
   label: string;
+  icon: LucideIcon;
+  tone: Tone;
   Component: (props: { db: ProfileDatabase; onChange: (db: ProfileDatabase) => void }) => ReactElement;
   count?: (db: ProfileDatabase) => number;
 }
 
 export const DATABASE_SECTIONS: SectionDef[] = [
-  { key: 'personal', label: 'Dados Pessoais', Component: PersonalSection },
-  { key: 'background', label: 'Sobre Mim', Component: BackgroundSection },
-  { key: 'experience', label: 'Experiências', Component: ExperienceSection, count: db => db.experience.length },
-  { key: 'projects', label: 'Projetos', Component: ProjectsSection, count: db => db.projects.length },
-  { key: 'skills', label: 'Habilidades', Component: SkillsSection, count: db => db.skills.length },
-  { key: 'education', label: 'Formação', Component: EducationSection, count: db => db.education.length },
+  { key: 'personal', label: 'Dados Pessoais', icon: User, tone: 'accent', Component: PersonalSection },
+  { key: 'background', label: 'Sobre Mim', icon: BookOpen, tone: 'accent', Component: BackgroundSection },
+  {
+    key: 'experience',
+    label: 'Experiências',
+    icon: Building2,
+    tone: 'teal',
+    Component: ExperienceSection,
+    count: db => db.experience.length
+  },
+  {
+    key: 'projects',
+    label: 'Projetos',
+    icon: FolderKanban,
+    tone: 'teal',
+    Component: ProjectsSection,
+    count: db => db.projects.length
+  },
+  {
+    key: 'skills',
+    label: 'Habilidades',
+    icon: Sparkles,
+    tone: 'violet',
+    Component: SkillsSection,
+    count: db => db.skills.length
+  },
+  {
+    key: 'education',
+    label: 'Formação',
+    icon: GraduationCap,
+    tone: 'violet',
+    Component: EducationSection,
+    count: db => db.education.length
+  },
   {
     key: 'additionalEducation',
     label: 'Formação Complementar',
+    icon: Award,
+    tone: 'violet',
     Component: AdditionalEducationSection,
     count: db => db.additional_education.length
   },
-  { key: 'languages', label: 'Idiomas', Component: LanguagesSection, count: db => db.languages.length },
-  { key: 'portfolio', label: 'Portfólio', Component: PortfolioSection }
+  {
+    key: 'languages',
+    label: 'Idiomas',
+    icon: Languages,
+    tone: 'violet',
+    Component: LanguagesSection,
+    count: db => db.languages.length
+  },
+  { key: 'portfolio', label: 'Portfólio', icon: Link2, tone: 'teal', Component: PortfolioSection }
 ];
 
 /** Toda a lógica do Editor do Banco (carregar, salvar, descartar, importar

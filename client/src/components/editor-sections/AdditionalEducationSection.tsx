@@ -1,4 +1,4 @@
-import { GraduationCap } from 'lucide-react';
+import { Award, GraduationCap } from 'lucide-react';
 import type { AdditionalEducationEntry, ProfileDatabase } from '../../types';
 import { makeListEditor } from '../../listEditor';
 import { Button } from '../ui/Button';
@@ -20,7 +20,7 @@ export function AdditionalEducationSection({ db, onChange }: SectionProps) {
   const items = makeListEditor(db.additional_education, next => onChange({ ...db, additional_education: next }));
 
   return (
-    <Card title="Formação Complementar">
+    <Card title="Formação Complementar" icon={Award} tone="violet">
       <Hint>
         Cursos, certificações ou formação continuada além da sua graduação/pós principal — aparece numa seção
         separada no currículo.

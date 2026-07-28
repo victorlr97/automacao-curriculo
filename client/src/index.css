@@ -1,29 +1,8 @@
 @import "tailwindcss";
 
-/* Mesmas fontes do template do PDF (template/fonts), servidas pelo Express
-   em /fonts — pra que o app e o currículo que ele gera tenham a mesma
-   identidade tipográfica. */
-@font-face {
-  font-family: "PT Serif";
-  font-weight: 400;
-  font-style: normal;
-  src: url("/fonts/PTSerif-Regular.woff2") format("woff2");
-  font-display: swap;
-}
-@font-face {
-  font-family: "PT Serif";
-  font-weight: 700;
-  font-style: normal;
-  src: url("/fonts/PTSerif-Bold.woff2") format("woff2");
-  font-display: swap;
-}
-@font-face {
-  font-family: "PT Serif";
-  font-weight: 400;
-  font-style: italic;
-  src: url("/fonts/PTSerif-Italic.woff2") format("woff2");
-  font-display: swap;
-}
+/* Lato é usada só pelo currículo/PDF (scripts/render.js) — o
+   ResumePreviewDocument trava nela explicitamente, sem depender de
+   --font-body, pra não ser afetado se a fonte do app mudar. */
 @font-face {
   font-family: "Lato";
   font-weight: 400;
@@ -40,8 +19,10 @@
 }
 
 @theme {
-  --font-display: "PT Serif", Georgia, "Times New Roman", serif;
-  --font-body: "Lato", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Elms Sans pra títulos, abas principais e nav de seções; Poppins pro
+     resto (texto corrido, campos de preenchimento, botões). */
+  --font-display: "Elms Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-body: "Poppins", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   /* Escala de tinta próxima da já usada no PDF (scripts/render.js). */
   --color-ink: #16181c;
@@ -59,12 +40,19 @@
   --color-danger-dark: #9a2d21;
   --color-danger-soft: #fbeae8;
 
+  /* Tons decorativos pra dar identidade às seções do banco de dados sem
+     competir com o azul de accent, que fica reservado pra ações/seleção. */
+  --color-teal: #0f7a6c;
+  --color-teal-soft: #e3f3f0;
+  --color-violet: #6d4aa8;
+  --color-violet-soft: #efe9f8;
+
   --color-border: #e1e5ea;
   --color-border-strong: #c9cfd6;
   --color-bg: #f5f6f8;
 
-  --shadow-xs: 0 1px 2px rgba(20, 23, 28, 0.06), 0 1px 1px rgba(20, 23, 28, 0.04);
-  --shadow-elevated: 0 8px 24px -6px rgba(20, 23, 28, 0.16), 0 2px 6px rgba(20, 23, 28, 0.06);
+  --shadow-xs: 0 2px 5px rgba(20, 23, 28, 0.09), 0 1px 2px rgba(20, 23, 28, 0.06);
+  --shadow-elevated: 0 14px 32px -10px rgba(20, 23, 28, 0.22), 0 4px 10px rgba(20, 23, 28, 0.08);
 }
 
 /* Em @layer base pra ter prioridade MENOR que as classes utilitárias do
@@ -80,6 +68,7 @@
   }
 
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
     color: var(--color-ink);
   }
 }

@@ -20,7 +20,7 @@ export function EducationSection({ db, onChange }: SectionProps) {
   const education = makeListEditor(db.education, next => onChange({ ...db, education: next }));
 
   return (
-    <Card title="Formação">
+    <Card title="Formação" icon={GraduationCap} tone="violet">
       <Hint>
         Graduação, pós-graduação, mestrado etc — uma entrada por diploma/título. Todos aparecem no currículo, sem
         filtro por vaga.

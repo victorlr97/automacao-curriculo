@@ -1,3 +1,4 @@
+import { Languages as LanguagesIcon } from 'lucide-react';
 import type { LanguageEntry, ProfileDatabase } from '../../types';
 import { makeListEditor } from '../../listEditor';
 import { Button } from '../ui/Button';
@@ -17,7 +18,7 @@ export function LanguagesSection({ db, onChange }: SectionProps) {
   const languages = makeListEditor(db.languages, next => onChange({ ...db, languages: next }));
 
   return (
-    <Card title="Idiomas">
+    <Card title="Idiomas" icon={LanguagesIcon} tone="violet">
       <Hint>Todos aparecem no currículo, sem filtro por vaga.</Hint>
       {languages.items.map((lang, idx) => (
         <LanguageEntryRow

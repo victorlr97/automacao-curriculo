@@ -49,11 +49,11 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
   return (
     <div
       className="mx-auto max-w-[816px] bg-white py-[42px] px-[48px] text-[14px] shadow-xs"
-      style={{ color: '#3a3a3a', lineHeight: 1.5 }}
+      style={{ color: '#3a3a3a', lineHeight: 1.5, fontFamily: "'Lato', sans-serif" }}
     >
       <div className="mb-[22px] flex items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[45px] font-bold leading-none" style={{ color: '#111' }}>
+          <h1 className="text-[45px] font-bold leading-none" style={{ color: '#111' }}>
             {data.personal.name}
           </h1>
           <div className="mt-[4px] text-[15px]" style={{ color: '#666' }}>
@@ -107,7 +107,7 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
                       {exp.company}
                       {exp.location ? `, ${exp.location}` : ''}
                     </span>{' '}
-                    — <span className="italic">{exp.role}</span>
+                    — <span>{exp.role}</span>
                   </>
                 }
                 period={exp.period}
@@ -122,7 +122,7 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
                 key={idx}
                 title={
                   <>
-                    <span className="font-bold">{proj.name}</span> — <span className="italic">{proj.role}</span>
+                    <span className="font-bold">{proj.name}</span> — <span>{proj.role}</span>
                   </>
                 }
                 stack={proj.stack?.join(', ')}
@@ -137,7 +137,7 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
                 key={idx}
                 title={
                   <>
-                    <span className="font-bold">{edu.institution}</span> — <span className="italic">{edu.degree}</span>
+                    <span className="font-bold">{edu.institution}</span> — <span>{edu.degree}</span>
                   </>
                 }
                 period={edu.period}
@@ -185,10 +185,10 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
               {data.additionalEducation.map((ed, idx) => (
                 <div
                   key={idx}
-                  className="mb-[10px] font-display text-[13px] italic leading-[1.4]"
+                  className="mb-[10px] text-[13px] leading-[1.4]"
                   style={{ color: '#555' }}
                 >
-                  <span className="not-italic font-bold" style={{ color: '#333' }}>
+                  <span className="font-bold" style={{ color: '#333' }}>
                     {ed.institution}
                   </span>
                   {ed.description ? ` — ${ed.description}` : ''}
@@ -247,7 +247,7 @@ function Entry({
 }) {
   return (
     <div className="mb-[14px]">
-      <div className="font-display text-[15px]" style={{ color: '#111' }}>
+      <div className="text-[15px]" style={{ color: '#111' }}>
         {title}
       </div>
       {period && (

@@ -21,7 +21,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 /** Botão de ação padrão do app. `href` renderiza como link (abrir PDF em nova
  * aba) mantendo a mesma aparência de botão. */
 export function Button({ variant = 'secondary', className = '', children, href, ...rest }: ButtonProps) {
-  const classes = `inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold font-body transition-all duration-150 cursor-pointer ${VARIANT_CLASSES[variant]} ${className}`;
+  const classes = `inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-[15px] font-bold font-body transition-all duration-150 cursor-pointer ${VARIANT_CLASSES[variant]} ${className}`;
 
   if (href) {
     return (

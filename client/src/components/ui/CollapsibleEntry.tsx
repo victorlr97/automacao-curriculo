@@ -20,26 +20,26 @@ export function CollapsibleEntry({ title, subtitle, meta, icon: Icon, onRemove, 
   return (
     <details
       open={defaultOpen}
-      className="group rounded-lg border border-border bg-[#fbfcfd] p-3.5 transition-colors duration-150 hover:border-border-strong open:pb-4"
+      className="group rounded-lg border border-border bg-[#fbfcfd] p-4 transition-all duration-150 hover:border-border-strong hover:shadow-elevated open:pb-4.5"
     >
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 marker:content-none [&::-webkit-details-marker]:hidden">
         <div className="flex min-w-0 items-start gap-2">
           <ChevronRight
-            size={14}
+            size={15}
             className="mt-[3px] shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-90"
           />
           <div className="min-w-0">
-            <div className="truncate text-[13.5px] font-semibold text-ink">{title}</div>
+            <div className="truncate text-[15px] font-semibold text-ink">{title}</div>
             {subtitle && (
-              <div className="mt-0.5 flex items-center gap-1 truncate text-[12px] text-ink-soft">
-                {Icon && <Icon size={11} className="shrink-0 text-ink-faint" />}
+              <div className="mt-1 flex items-center gap-1 truncate text-[13px] text-ink-soft">
+                {Icon && <Icon size={12} className="shrink-0 text-ink-faint" />}
                 <span className="truncate">{subtitle}</span>
               </div>
             )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {meta && <span className="whitespace-nowrap text-[11px] text-ink-faint">{meta}</span>}
+          {meta && <span className="whitespace-nowrap text-[12px] text-ink-faint">{meta}</span>}
           <RemoveButton
             onClick={e => {
               e.preventDefault();
@@ -49,7 +49,7 @@ export function CollapsibleEntry({ title, subtitle, meta, icon: Icon, onRemove, 
           />
         </div>
       </summary>
-      <div className="mt-3.5 flex flex-col gap-3.5">{children}</div>
+      <div className="mt-4 flex flex-col gap-4">{children}</div>
     </details>
   );
 }

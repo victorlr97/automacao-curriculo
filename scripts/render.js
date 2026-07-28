@@ -56,10 +56,7 @@ function renderHtml(data, options = {}) {
 
   const fonts = {
     latoRegular: fontDataUri('Lato-Regular.woff2'),
-    latoBold: fontDataUri('Lato-Bold.woff2'),
-    ptSerifRegular: fontDataUri('PTSerif-Regular.woff2'),
-    ptSerifBold: fontDataUri('PTSerif-Bold.woff2'),
-    ptSerifItalic: fontDataUri('PTSerif-Italic.woff2')
+    latoBold: fontDataUri('Lato-Bold.woff2')
   };
 
   const contactLines = [];
@@ -108,9 +105,6 @@ function renderHtml(data, options = {}) {
 <head>
 <meta charset="UTF-8">
 <style>
-  @font-face { font-family: 'PT Serif'; font-weight: 400; font-style: normal; src: url(${fonts.ptSerifRegular}) format('woff2'); }
-  @font-face { font-family: 'PT Serif'; font-weight: 700; font-style: normal; src: url(${fonts.ptSerifBold}) format('woff2'); }
-  @font-face { font-family: 'PT Serif'; font-weight: 400; font-style: italic; src: url(${fonts.ptSerifItalic}) format('woff2'); }
   @font-face { font-family: 'Lato'; font-weight: 400; font-style: normal; src: url(${fonts.latoRegular}) format('woff2'); }
   @font-face { font-family: 'Lato'; font-weight: 700; font-style: normal; src: url(${fonts.latoBold}) format('woff2'); }
 
@@ -148,7 +142,7 @@ function renderHtml(data, options = {}) {
   }
 
   h1.name {
-    font-family: 'PT Serif', serif;
+    font-family: 'Lato', sans-serif;
     font-weight: 700;
     font-size: ${pt(34)};
     color: #111;
@@ -181,12 +175,11 @@ function renderHtml(data, options = {}) {
 
   .entry { margin-bottom: ${px(14)}; break-inside: avoid; page-break-inside: avoid; }
   .entry-title {
-    font-family: 'PT Serif', serif;
+    font-family: 'Lato', sans-serif;
     font-size: ${pt(11.5)};
     color: #111;
   }
   .entry-name { font-weight: 700; }
-  .entry-role { font-style: italic; }
   .entry-period {
     font-size: ${pt(9)};
     color: #888;
@@ -208,8 +201,7 @@ function renderHtml(data, options = {}) {
   }
 
   .additional-edu-item {
-    font-family: 'PT Serif', serif;
-    font-style: italic;
+    font-family: 'Lato', sans-serif;
     font-size: ${pt(9.5)};
     color: #555;
     margin-bottom: ${px(10)};
@@ -217,7 +209,7 @@ function renderHtml(data, options = {}) {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .additional-edu-item .entry-name { font-style: normal; color: #333; }
+  .additional-edu-item .entry-name { color: #333; }
 
   .portfolio-intro { margin-bottom: ${px(6)}; color: #444; }
   .portfolio-links div { margin-bottom: ${px(3)}; }
