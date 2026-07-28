@@ -88,6 +88,7 @@ const RESUME_SCHEMA = {
       }
     },
     presentationScript: { type: 'string' },
+    coverLetter: { type: 'string' },
     meta: {
       type: 'object',
       properties: {
@@ -98,7 +99,7 @@ const RESUME_SCHEMA = {
       required: ['profile', 'slugHint', 'resumo']
     }
   },
-  required: ['language', 'title', 'contactLocation', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'skills', 'languages', 'presentationScript', 'meta']
+  required: ['language', 'title', 'contactLocation', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'skills', 'languages', 'presentationScript', 'coverLetter', 'meta']
 };
 
 const RESUME_IMPORT_SCHEMA = {
@@ -334,9 +335,10 @@ const TRANSLATE_SCHEMA = {
         required: ['name', 'level']
       }
     },
-    presentationScript: { type: 'string' }
+    presentationScript: { type: 'string' },
+    coverLetter: { type: 'string' }
   },
-  required: ['title', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'languages', 'presentationScript']
+  required: ['title', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'languages', 'presentationScript', 'coverLetter']
 };
 
 function buildImportPrompt(rawText) {
@@ -392,7 +394,8 @@ function buildTranslatePrompt(resolvedData, targetLanguage) {
     education: resolvedData.education.map(edu => ({ degree: edu.degree })),
     additionalEducation: (resolvedData.additionalEducation || []).map(ed => ({ description: ed.description })),
     languages: resolvedData.languages,
-    presentationScript: resolvedData.presentationScript || ''
+    presentationScript: resolvedData.presentationScript || '',
+    coverLetter: resolvedData.coverLetter || ''
   };
 
   return `Traduza o currículo abaixo para ${targetLabel}. Isso é uma TRADUÇÃO, não uma recomposição — preserve o sentido, os fatos e a estrutura de cada frase o máximo possível, adaptando pro idioma alvo de forma natural (não literal palavra-por-palavra, mas fiel ao conteúdo original).
@@ -410,6 +413,7 @@ ${JSON.stringify(forTranslation, null, 2)}
 5. Traduza cada item de "languages" (nome do idioma e nível, ex: "Português"/"Nativo" -> "Portuguese"/"Native", ou o inverso).
 6. Mantenha o mesmo estilo direto e impessoal do texto original: sem "eu"/"I" ou "você"/"you", sem clichês de currículo gerado por IA, sem travessões em excesso.
 7. Traduza "presentationScript" também, se não estiver vazio — essa parte É pra ser falada em primeira pessoa ("Meu nome é..."/"My name is..."). Não traduza palavra por palavra de um jeito que fique formal: mantenha frases curtas, contrações naturais do idioma alvo, sem listar 3+ itens em fileira, sem travessão, sem jargão corporativo. Se o texto original já tem alguma frase mais "escrita" demais, aproveite a tradução pra deixá-la mais natural de se falar. Se o texto original citar o nome de alguma empresa (ex: "Non Stop", "ISE"), remova na tradução e generalize (ex: "at a design agency") — esse campo nunca deve citar nomes literais de empresas. Se vier vazio, devolva vazio.
+8. Traduza "coverLetter" também, se não estiver vazio. Mantenha o limite de 500 caracteres no idioma de destino (recontagem pode mudar o tamanho — ajuste se precisar cortar) e não adicione saudação/fechamento que o original não tinha. Se vier vazio, devolva vazio.
 
 Retorne o objeto preenchendo exatamente o schema fornecido.`;
 }
@@ -427,6 +431,17 @@ function presentationScriptStyleRules(name) {
 - Regra de travessão e listas é ABSOLUTA, não uma preferência: ZERO travessões e ZERO listas de 3+ itens separados por vírgula em todo o presentationScript, sem exceção. Se ao revisar o texto que você mesmo escreveu aparecer um "—" ou uma sequência tipo "X, Y, Z e W", reescreva aquela frase antes de responder.
 - NÃO espelhe a linguagem da vaga colada pelo usuário. A vaga (ou as instruções de vídeo) servem só pra decidir O QUE enfatizar entre os fatos reais de ${name} — nunca como fonte de frases pra parafrasear como se fossem a experiência dessa pessoa. Se a vaga lista responsabilidades tipo "collaborate with marketing and content teams" ou "manage revisions and deadlines", NÃO transforme isso em frases sobre ${name} a menos que exista um fato correspondente no banco — caso contrário fica óbvio que é só uma reformulação do anúncio de vaga pra parecer compatível, o que soa falso. Fale só do que está de fato no banco de dados.
 - CUIDADO ESPECIAL no parágrafo final (a parte de "por que eu me encaixo"): esse é o ponto onde mais se cai na tentação de listar de volta os requisitos da vaga um por um (ex: "I bring experience with brand guidelines, file preparation, and meeting deadlines" — isso é só reciclar a lista "Responsibilities/Qualifications" da vaga com outras palavras). Em vez disso, feche conectando 1-2 fatos CONCRETOS do banco (um projeto específico, uma habilidade real) ao motivo de ter interesse na vaga — não tente marcar todos os itens da lista de requisitos. É normal e esperado deixar vários requisitos da vaga sem resposta explícita nesse texto.`;
+}
+
+function coverLetterStyleRules(name) {
+  return `Estrutura de carta de verdade — não um texto solto: saudação breve → 1-2 parágrafos curtos de corpo → despedida breve + nome. É isso que faz o texto ser reconhecível como carta (ex: "Prezados," ... "Atenciosamente,\\n${name}"). Se a vaga citar o nome da empresa, pode personalizar a saudação (ex: "Prezados(as) da [Empresa],"); senão use algo genérico e curto.
+- LIMITE de 500 caracteres NO TOTAL — saudação + corpo + despedida + nome, contando espaços e pontuação. Esse é o orçamento inteiro, não só do corpo: mantenha saudação e despedida bem curtas (ex: "Prezados," e "Atenciosamente,") pra sobrar espaço de verdade pro corpo, que é a parte que importa.
+- O CORPO PRECISA ter pelo menos 1 fato CONCRETO e NOMEADO do banco (o nome de um projeto real, uma tecnologia real, uma experiência real) conectado ao que essa vaga pede especificamente. Isso é obrigatório, não opcional — releia o texto antes de responder e, se o corpo só tiver elogio genérico sem nenhum nome/fato específico, reescreva.
+- PROIBIDO preencher o corpo com frases vazias de autoelogio que não dizem nada específico sobre ${name} — nunca escreva variações de "possuo o perfil necessário para o cargo", "tenho grande interesse na vaga", "fico à inteira disposição", "tenho vasta experiência na área", "venho candidatar-me à vaga", "envio meus dados/currículo em anexo para serem considerados". Quem lê já sabe que é uma candidatura; não gaste caracteres dizendo o óbvio.
+- Não é um resumo do "objective" nem uma versão condensada do currículo inteiro — é um gancho específico pra essa vaga, pra despertar interesse em abrir o currículo anexo.
+- NÃO espelhe de volta a lista de requisitos da vaga — mesma regra do presentationScript: fale só do que tem fato correspondente no banco, nunca invente uma qualificação só porque a vaga pediu.
+- Mesmas regras de estilo do resto do currículo: sem clichês de currículo gerado por IA ("proven track record", "passionate about", "leverage cutting-edge", etc.), no máximo um travessão em todo o texto, frases curtas e concretas.
+- Mesmo idioma do resto do currículo (saudação e despedida também traduzidas pro idioma certo).`;
 }
 
 function buildPrompt(database, jobDescription, videoInstructions) {
@@ -467,12 +482,15 @@ ${videoInstructions && videoInstructions.trim() ? videoInstructions : '(nenhuma 
 13. "presentationScript": muitas vagas internacionais pedem um vídeo curto de apresentação, às vezes com um roteiro específico do que cobrir (perguntas, pontos obrigatórios, duração pedida). Se o usuário forneceu "Instruções específicas pro vídeo" (ver seção abaixo), use isso como guia principal — responda aos pontos pedidos, na ordem pedida, sempre baseado em fatos reais do banco (nunca invente uma resposta pra um ponto sem fato correspondente; nesse caso responda de forma genérica e honesta em vez de inventar, ou simplesmente não force uma resposta artificial). Se a vaga pedir uma duração diferente do padrão, siga a duração pedida. Se NÃO houver instruções específicas, use a estrutura padrão: quem é ${name} (nome + resumo de background), a trajetória profissional até aqui (ex: uma transição de carreira, se os fatos do banco indicarem uma), 1-2 projetos ou experiências mais relevantes pra ESSA vaga específica, e por que esse perfil se encaixa na vaga. Duração alvo nesse caso: 30 segundos a 2 minutos falado (aproximadamente 90 a 260 palavras).
 
 ${presentationScriptStyleRules(name)}
-14. meta.profile: uma descrição curta e específica do perfil que você montou pra essa vaga (não precisa ser uma das 3 categorias clássicas — pode ser algo como "Full Stack com diferencial em Design Gráfico" se for o caso real). meta.slugHint: identificador curto pra nome de arquivo (baseado na empresa se aparecer na vaga, senão no cargo — só letras minúsculas, números e hífen, sem espaços/acentos). meta.resumo: 1-2 frases em português explicando as escolhas feitas (aparece pro usuário na interface, não entra no PDF).
+14. "coverLetter": carta de apresentação curta pra mandar junto com o currículo (email ou formulário de candidatura).
+
+${coverLetterStyleRules(name)}
+15. meta.profile: uma descrição curta e específica do perfil que você montou pra essa vaga (não precisa ser uma das 3 categorias clássicas — pode ser algo como "Full Stack com diferencial em Design Gráfico" se for o caso real). meta.slugHint: identificador curto pra nome de arquivo (baseado na empresa se aparecer na vaga, senão no cargo — só letras minúsculas, números e hífen, sem espaços/acentos). meta.resumo: 1-2 frases em português explicando as escolhas feitas (aparece pro usuário na interface, não entra no PDF).
 
 Retorne o objeto preenchendo exatamente o schema fornecido.`;
 }
 
-function runClaude(prompt, schema) {
+function runClaude(prompt, schema, effort = 'high') {
   return new Promise((resolve, reject) => {
     // O prompt vai via stdin (não como argumento de CLI) para evitar o limite de
     // tamanho de linha de comando do Windows, já que o prompt embute o banco de
@@ -485,9 +503,13 @@ function runClaude(prompt, schema) {
       '--no-session-persistence',
       '--model', 'sonnet',
       // "low" era ~62% mais rápido, mas Victor notou currículos saindo mais
-      // genéricos/repetitivos com esse nível — a tarefa de compor um texto sob
-      // medida pra cada vaga se beneficia de mais raciocínio do que "low" dava.
-      '--effort', 'high'
+      // genéricos/repetitivos com esse nível — a tarefa de compor o currículo
+      // inteiro pra cada vaga (o default "high") se beneficia de mais raciocínio
+      // do que "low" dava. Chamadas menores e mais isoladas (regenerar só o
+      // roteiro ou só a carta) passam "medium" explicitamente — não têm o banco
+      // inteiro pra ponderar, só o currículo já composto, e effort alto nelas
+      // só deixa a resposta mais lenta sem ganho de qualidade perceptível.
+      '--effort', effort
     ];
 
     const child = spawn('claude', args, { cwd: PROJECT_ROOT });
@@ -553,6 +575,7 @@ async function generateResumeData(databasePath, jobDescription, videoInstruction
     skills: structured.skills,
     languages: structured.languages,
     presentationScript: structured.presentationScript || '',
+    coverLetter: structured.coverLetter || '',
     portfolio: database.portfolio
   };
 
@@ -584,6 +607,7 @@ async function importResumeFromText(rawText) {
     skills: structured.skills || [],
     languages: structured.languages || [],
     presentationScript: '',
+    coverLetter: '',
     portfolio: structured.portfolio || { github: '', behance: '' }
   };
 
@@ -645,7 +669,8 @@ async function translateResume(resolvedData, targetLanguage) {
       description: translated.additionalEducation[i] ? translated.additionalEducation[i].description : ed.description
     })),
     languages: translated.languages,
-    presentationScript: translated.presentationScript || ''
+    presentationScript: translated.presentationScript || '',
+    coverLetter: translated.coverLetter || ''
   };
 }
 
@@ -688,8 +713,47 @@ Retorne o objeto preenchendo exatamente o schema fornecido.`;
 
 async function generatePresentationScript(resolvedData, videoInstructions) {
   const prompt = buildScriptPrompt(resolvedData, videoInstructions);
-  const structured = await runClaude(prompt, SCRIPT_SCHEMA);
+  const structured = await runClaude(prompt, SCRIPT_SCHEMA, 'medium');
   return structured.presentationScript;
+}
+
+const COVER_LETTER_SCHEMA = {
+  type: 'object',
+  properties: {
+    coverLetter: { type: 'string' }
+  },
+  required: ['coverLetter']
+};
+
+function buildCoverLetterPrompt(resolvedData) {
+  const name = (resolvedData.personal && resolvedData.personal.name) || 'a pessoa candidata';
+  const context = {
+    title: resolvedData.title,
+    objective: resolvedData.objective,
+    experience: resolvedData.experience.map(e => ({ role: e.role, description: e.description })),
+    projects: resolvedData.projects.map(p => ({ name: p.name, role: p.role, description: p.description })),
+    skills: resolvedData.skills
+  };
+
+  return `Você vai escrever (ou reescrever) só a carta de apresentação pra ${name}, com base no currículo já montado abaixo. Essa carta é pra mandar junto com o currículo (email ou formulário de candidatura).
+
+## Currículo já montado (idioma: ${resolvedData.language})
+
+${JSON.stringify(context, null, 2)}
+
+## Como escrever
+
+Escreva no idioma "${resolvedData.language}".
+
+${coverLetterStyleRules(name)}
+
+Retorne o objeto preenchendo exatamente o schema fornecido.`;
+}
+
+async function generateCoverLetter(resolvedData) {
+  const prompt = buildCoverLetterPrompt(resolvedData);
+  const structured = await runClaude(prompt, COVER_LETTER_SCHEMA, 'medium');
+  return structured.coverLetter;
 }
 
 module.exports = {
@@ -698,6 +762,7 @@ module.exports = {
   importDatabaseFromText,
   translateResume,
   generatePresentationScript,
+  generateCoverLetter,
   buildPrompt,
   RESUME_SCHEMA
 };

@@ -4,3 +4,19 @@ node_modules/
 # O app recria essas pastas sozinho na primeira vez que roda.
 data/
 output/
+
+# Build do client (Vite gera tudo aqui via `npm run build`) — não versionar.
+public/
+
+# Segredos e configuração de ambiente (chaves do Firebase, API keys, etc.).
+.env
+.env.*
+*.local
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# Sistema operacional / editor.
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json

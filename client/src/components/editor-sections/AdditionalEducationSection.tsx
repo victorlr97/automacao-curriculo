@@ -1,3 +1,4 @@
+import { GraduationCap } from 'lucide-react';
 import type { AdditionalEducationEntry, ProfileDatabase } from '../../types';
 import { makeListEditor } from '../../listEditor';
 import { Button } from '../ui/Button';
@@ -25,7 +26,13 @@ export function AdditionalEducationSection({ db, onChange }: SectionProps) {
         separada no currículo.
       </Hint>
       {items.items.map((ed, idx) => (
-        <CollapsibleEntry key={idx} title={ed.institution || `Curso ${idx + 1}`} onRemove={() => items.removeAt(idx)}>
+        <CollapsibleEntry
+          key={idx}
+          title={ed.institution || `Curso ${idx + 1}`}
+          subtitle={ed.description}
+          icon={GraduationCap}
+          onRemove={() => items.removeAt(idx)}
+        >
           <TextField label="Instituição" value={ed.institution} onChange={v => items.updateAt(idx, { institution: v })} />
           <TextArea
             label="Descrição (curso, tema)"

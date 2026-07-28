@@ -27,10 +27,13 @@ export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
     saving,
     scriptGenerating,
     scriptStatus,
+    coverLetterGenerating,
+    coverLetterStatus,
     handleSectionClick,
     handleBackToPreview,
     handleSave,
-    handleGenerateScript
+    handleGenerateScript,
+    handleGenerateCoverLetter
   } = generator;
 
   useEffect(() => {
@@ -96,6 +99,9 @@ export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
             onGenerateScript={handleGenerateScript}
             generatingScript={scriptGenerating}
             scriptStatus={scriptStatus}
+            onGenerateCoverLetter={handleGenerateCoverLetter}
+            generatingCoverLetter={coverLetterGenerating}
+            coverLetterStatus={coverLetterStatus}
             onSave={handleSave}
             saving={saving}
           />

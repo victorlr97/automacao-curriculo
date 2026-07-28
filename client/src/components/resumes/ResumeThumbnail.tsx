@@ -2,7 +2,7 @@ import { FileText } from 'lucide-react';
 import type { ResolvedResume } from '../../types';
 import { ResumePreviewDocument } from '../workspace/ResumePreviewDocument';
 
-const DOC_WIDTH = 820;
+const DOC_WIDTH = 816;
 const THUMB_WIDTH = 132;
 const THUMB_HEIGHT = 170;
 const SCALE = THUMB_WIDTH / DOC_WIDTH;
