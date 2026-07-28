@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 const spawn = require('cross-spawn');
 
@@ -554,9 +553,8 @@ function runClaude(prompt, schema, effort = 'high') {
   });
 }
 
-async function generateResumeData(databasePath, jobDescription, videoInstructions) {
-  const database = JSON.parse(fs.readFileSync(databasePath, 'utf8'));
-  database.education = toEducationArray(database.education);
+async function generateResumeData(rawDatabase, jobDescription, videoInstructions) {
+  const database = { ...rawDatabase, education: toEducationArray(rawDatabase.education) };
   const prompt = buildPrompt(database, jobDescription, videoInstructions);
   const structured = await runClaude(prompt, RESUME_SCHEMA);
 

@@ -4,13 +4,13 @@ const path = require('path');
 const multer = require('multer');
 const { PDFParse } = require('pdf-parse');
 const { exec } = require('child_process');
+const { auth, db } = require('./firebase-admin');
 const { generateResumeData, importResumeFromText, importDatabaseFromText, translateResume, generatePresentationScript, generateCoverLetter } = require('./claude-engine');
 const { buildResume } = require('../scripts/build-resume');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const PROJECT_ROOT = path.join(__dirname, '..');
-const PROFILES_DIR = path.join(PROJECT_ROOT, 'data', 'profiles');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'output');
 const PORT = 5175;
 
@@ -33,28 +33,37 @@ function slugify(text) {
   return slug || 'curriculo';
 }
 
-// ---------- Perfis (cada perfil é uma pasta com seu próprio banco de dados
-// e sua própria pasta de currículos gerados, isolados um do outro) ----------
+// ---------- Autenticação: cada conta é dona de exatamente um banco de dados
+// (users/{uid} no Firestore) e de uma pasta de currículos gerados
+// (output/{uid}), isolados por conta. O uid vem de um token do Firebase
+// verificado no servidor — nunca de algo que o cliente escolhe na URL. ----------
 
-function profileDir(profileId) {
-  return path.join(PROFILES_DIR, profileId);
-}
-function profileDatabasePath(profileId) {
-  return path.join(profileDir(profileId), 'database.json');
-}
-function profileBackupPath(profileId) {
-  return path.join(profileDir(profileId), 'database.backup.json');
-}
-function profileOutputDir(profileId) {
-  return path.join(OUTPUT_DIR, profileId);
-}
-function profileExists(profileId) {
-  return fs.existsSync(profileDatabasePath(profileId));
+async function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer (.+)$/);
+  if (!match) {
+    res.status(401).json({ error: 'Não autenticado.' });
+    return;
+  }
+  try {
+    const decoded = await auth.verifyIdToken(match[1]);
+    req.uid = decoded.uid;
+    req.userEmail = decoded.email || '';
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Sessão inválida ou expirada. Faça login novamente.' });
+  }
 }
 
-function blankDatabase(name) {
+app.use('/api', requireAuth);
+
+function userOutputDir(uid) {
+  return path.join(OUTPUT_DIR, uid);
+}
+
+function blankDatabase() {
   return {
-    personal: { name: name || '', age: 0, location: '', phone: '', email: '', github: '', linkedin: '', behance: '' },
+    personal: { name: '', age: 0, location: '', phone: '', email: '', github: '', linkedin: '', behance: '' },
     background_facts: [],
     experience: [],
     projects: [],
@@ -66,99 +75,38 @@ function blankDatabase(name) {
   };
 }
 
-// Mesma lógica de "não sobrescrever" usada pra nomes de arquivo de currículo
-// (uniqueSlug, abaixo), aplicada aqui pra pasta de perfil.
-function uniqueProfileSlug(desiredSlug) {
-  let slug = desiredSlug;
-  let counter = 2;
-  while (fs.existsSync(profileDir(slug))) {
-    slug = `${desiredSlug}-${counter}`;
-    counter++;
-  }
-  return slug;
+// No primeiro acesso de uma conta nova, o documento Firestore ainda não
+// existe — cria com o banco em branco (mesmo shape que o editor espera) e
+// devolve, em vez de 404.
+async function getOrCreateDatabase(uid, email) {
+  const ref = db.collection('users').doc(uid);
+  const snap = await ref.get();
+  if (snap.exists) return snap.data();
+  const created = { ...blankDatabase(), email, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  await ref.set(created);
+  return created;
 }
 
-// Resolve :profileId em qualquer rota que o use, validando que o perfil
-// existe antes de entrar no handler — evita repetir essa checagem em cada rota.
-app.param('profileId', (req, res, next, id) => {
-  const profileId = path.basename(id);
-  if (!profileExists(profileId)) {
-    res.status(404).json({ error: 'Perfil não encontrado.' });
-    return;
-  }
-  req.profileId = profileId;
-  next();
-});
-
-app.get('/api/profiles', (req, res) => {
+app.get('/api/database', async (req, res) => {
   try {
-    fs.mkdirSync(PROFILES_DIR, { recursive: true });
-    const ids = fs.readdirSync(PROFILES_DIR, { withFileTypes: true })
-      .filter(d => d.isDirectory())
-      .map(d => d.name)
-      .filter(profileExists);
-
-    const items = ids.map(id => {
-      let name = id;
-      try {
-        const data = JSON.parse(fs.readFileSync(profileDatabasePath(id), 'utf8'));
-        name = (data.personal && data.personal.name) || id;
-      } catch (err) { /* database.json corrompido ou incompleto: usa o id como nome */ }
-      return { id, name };
-    });
-
-    items.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: `Não foi possível listar os perfis: ${err.message}` });
-  }
-});
-
-app.post('/api/profiles', (req, res) => {
-  const { name } = req.body || {};
-  if (!name || !name.trim()) {
-    res.status(400).json({ error: 'Informe um nome para o novo perfil.' });
-    return;
-  }
-  try {
-    const id = uniqueProfileSlug(slugify(name));
-    fs.mkdirSync(profileDir(id), { recursive: true });
-    fs.mkdirSync(profileOutputDir(id), { recursive: true });
-    fs.writeFileSync(profileDatabasePath(id), JSON.stringify(blankDatabase(name.trim()), null, 2), 'utf8');
-    res.json({ id, name: name.trim() });
-  } catch (err) {
-    res.status(500).json({ error: `Falha ao criar perfil: ${err.message}` });
-  }
-});
-
-app.delete('/api/profiles/:profileId', (req, res) => {
-  try {
-    fs.rmSync(profileDir(req.profileId), { recursive: true, force: true });
-    fs.rmSync(profileOutputDir(req.profileId), { recursive: true, force: true });
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: `Falha ao excluir perfil: ${err.message}` });
-  }
-});
-
-app.get('/api/profiles/:profileId/database', (req, res) => {
-  try {
-    const data = fs.readFileSync(profileDatabasePath(req.profileId), 'utf8');
-    res.type('application/json').send(data);
+    const data = await getOrCreateDatabase(req.uid, req.userEmail);
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: `Não foi possível ler o banco de dados: ${err.message}` });
   }
 });
 
-app.put('/api/profiles/:profileId/database', (req, res) => {
+app.put('/api/database', async (req, res) => {
   const incoming = req.body;
   if (!incoming || typeof incoming !== 'object' || !incoming.personal || !incoming.projects) {
     res.status(400).json({ error: 'Formato inválido: campos "personal" e "projects" são obrigatórios.' });
     return;
   }
   try {
-    fs.copyFileSync(profileDatabasePath(req.profileId), profileBackupPath(req.profileId));
-    fs.writeFileSync(profileDatabasePath(req.profileId), JSON.stringify(incoming, null, 2), 'utf8');
+    await db.collection('users').doc(req.uid).set(
+      { ...incoming, email: req.userEmail, updatedAt: new Date().toISOString() },
+      { merge: false }
+    );
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: `Falha ao salvar: ${err.message}` });
@@ -166,10 +114,9 @@ app.put('/api/profiles/:profileId/database', (req, res) => {
 });
 
 // Lê um PDF de currículo já pronto e extrai fatos brutos (não texto já
-// composto) pra popular o Editor do Banco desse perfil. Não grava nada em
-// disco — devolve os dados pro front-end preencher o formulário, revisar e
-// só então salvar (mesmo fluxo/backup do PUT acima).
-app.post('/api/profiles/:profileId/database/import', upload.single('resume'), async (req, res) => {
+// composto) pra popular o Editor do Banco. Não grava nada — devolve os dados
+// pro front-end preencher o formulário, revisar e só então salvar (PUT acima).
+app.post('/api/database/import', upload.single('resume'), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: 'Envie um arquivo PDF.' });
     return;
@@ -190,10 +137,10 @@ app.post('/api/profiles/:profileId/database/import', upload.single('resume'), as
 // Quando o usuário escolhe o nome do arquivo, evita sobrescrever um já
 // existente (PDF ou JSON) acrescentando "-2", "-3" etc., em vez de usar
 // timestamp — nomes escolhidos à mão devem ficar limpos e fáceis de achar.
-function uniqueSlug(profileId, desiredSlug) {
+function uniqueSlug(uid, desiredSlug) {
   let slug = desiredSlug;
   let counter = 2;
-  const dir = profileOutputDir(profileId);
+  const dir = userOutputDir(uid);
   while (fs.existsSync(path.join(dir, `${slug}.pdf`)) || fs.existsSync(path.join(dir, `${slug}.json`))) {
     slug = `${desiredSlug}-${counter}`;
     counter++;
@@ -201,8 +148,8 @@ function uniqueSlug(profileId, desiredSlug) {
   return slug;
 }
 
-async function saveResumeFiles(profileId, slug, resolved) {
-  const dir = profileOutputDir(profileId);
+async function saveResumeFiles(uid, slug, resolved) {
+  const dir = userOutputDir(uid);
   const jsonPath = path.join(dir, `${slug}.json`);
   const pdfPath = path.join(dir, `${slug}.pdf`);
   fs.mkdirSync(dir, { recursive: true });
@@ -211,7 +158,7 @@ async function saveResumeFiles(profileId, slug, resolved) {
   return { jsonPath, pdfPath };
 }
 
-app.post('/api/profiles/:profileId/generate', async (req, res) => {
+app.post('/api/resumes/generate', async (req, res) => {
   const { jobDescription, fileName, videoInstructions } = req.body || {};
   if (!jobDescription || !jobDescription.trim()) {
     res.status(400).json({ error: 'Cole a descrição da vaga antes de gerar.' });
@@ -219,12 +166,13 @@ app.post('/api/profiles/:profileId/generate', async (req, res) => {
   }
 
   try {
-    const { resolved, meta } = await generateResumeData(profileDatabasePath(req.profileId), jobDescription, videoInstructions);
+    const database = await getOrCreateDatabase(req.uid, req.userEmail);
+    const { resolved, meta } = await generateResumeData(database, jobDescription, videoInstructions);
     const slug = fileName && fileName.trim()
-      ? uniqueSlug(req.profileId, slugify(fileName))
+      ? uniqueSlug(req.uid, slugify(fileName))
       : `${slugify(meta.slugHint)}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
     if (fileName && fileName.trim()) resolved.fileLabel = fileName.trim();
-    await saveResumeFiles(req.profileId, slug, resolved);
+    await saveResumeFiles(req.uid, slug, resolved);
 
     res.json({
       slug,
@@ -234,16 +182,16 @@ app.post('/api/profiles/:profileId/generate', async (req, res) => {
       resumo: meta.resumo,
       presentationScript: resolved.presentationScript || '',
       coverLetter: resolved.coverLetter || '',
-      pdfUrl: `/output/${req.profileId}/${slug}.pdf`
+      pdfUrl: `/output/${req.uid}/${slug}.pdf`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/api/profiles/:profileId/resumes', (req, res) => {
+app.get('/api/resumes', (req, res) => {
   try {
-    const dir = profileOutputDir(req.profileId);
+    const dir = userOutputDir(req.uid);
     fs.mkdirSync(dir, { recursive: true });
     const pdfFiles = fs.readdirSync(dir).filter(f => f.endsWith('.pdf'));
 
@@ -273,7 +221,7 @@ app.get('/api/profiles/:profileId/resumes', (req, res) => {
         language,
         presentationScript,
         generatedAt: stat.mtime.toISOString(),
-        pdfUrl: `/output/${req.profileId}/${pdfFile}`
+        pdfUrl: `/output/${req.uid}/${pdfFile}`
       };
     });
 
@@ -284,11 +232,11 @@ app.get('/api/profiles/:profileId/resumes', (req, res) => {
   }
 });
 
-app.delete('/api/profiles/:profileId/resumes/:slug', (req, res) => {
+app.delete('/api/resumes/:slug', (req, res) => {
   const slug = path.basename(req.params.slug);
   try {
     [`${slug}.pdf`, `${slug}.json`].forEach(filename => {
-      const filePath = path.join(profileOutputDir(req.profileId), filename);
+      const filePath = path.join(userOutputDir(req.uid), filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     });
     res.json({ ok: true });
@@ -298,7 +246,7 @@ app.delete('/api/profiles/:profileId/resumes/:slug', (req, res) => {
 });
 
 // Edita o conteúdo de um currículo já gerado e re-renderiza o PDF no mesmo slug.
-app.put('/api/profiles/:profileId/resumes/:slug', async (req, res) => {
+app.put('/api/resumes/:slug', async (req, res) => {
   const slug = path.basename(req.params.slug);
   const { fileName, ...resolved } = req.body || {};
   if (!resolved || typeof resolved !== 'object' || !resolved.personal || !resolved.title) {
@@ -306,7 +254,7 @@ app.put('/api/profiles/:profileId/resumes/:slug', async (req, res) => {
     return;
   }
   try {
-    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    const jsonPath = path.join(userOutputDir(req.uid), `${slug}.json`);
     if (!fs.existsSync(jsonPath)) {
       res.status(404).json({ error: 'Currículo não encontrado.' });
       return;
@@ -315,13 +263,13 @@ app.put('/api/profiles/:profileId/resumes/:slug', async (req, res) => {
     // Se o nome do arquivo não mudou, sobrescreve no lugar (mesmo slug). Se
     // mudou, salva como um arquivo novo, mantendo o original intacto.
     const renamed = fileName && fileName.trim() && fileName.trim() !== slug;
-    const targetSlug = renamed ? uniqueSlug(req.profileId, slugify(fileName)) : slug;
+    const targetSlug = renamed ? uniqueSlug(req.uid, slugify(fileName)) : slug;
     // Só atualiza o rótulo exibido na lista se o usuário de fato renomeou aqui —
     // caso contrário preserva o fileLabel que já veio junto de `resolved` (se houver).
     if (renamed) resolved.fileLabel = fileName.trim();
 
-    await saveResumeFiles(req.profileId, targetSlug, resolved);
-    res.json({ ok: true, slug: targetSlug, pdfUrl: `/output/${req.profileId}/${targetSlug}.pdf` });
+    await saveResumeFiles(req.uid, targetSlug, resolved);
+    res.json({ ok: true, slug: targetSlug, pdfUrl: `/output/${req.uid}/${targetSlug}.pdf` });
   } catch (err) {
     res.status(500).json({ error: `Falha ao salvar: ${err.message}` });
   }
@@ -336,7 +284,7 @@ async function extractTextFromPdfBuffer(buffer) {
 
 // Importa um PDF de currículo externo, estrutura o conteúdo via IA e gera uma
 // nova entrada (JSON + PDF) no mesmo formato usado pelo resto do sistema.
-app.post('/api/profiles/:profileId/resumes/import', upload.single('resume'), async (req, res) => {
+app.post('/api/resumes/import', upload.single('resume'), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: 'Envie um arquivo PDF.' });
     return;
@@ -350,16 +298,16 @@ app.post('/api/profiles/:profileId/resumes/import', upload.single('resume'), asy
 
     const { resolved, meta } = await importResumeFromText(text);
     const slug = req.body.fileName && req.body.fileName.trim()
-      ? uniqueSlug(req.profileId, slugify(req.body.fileName))
+      ? uniqueSlug(req.uid, slugify(req.body.fileName))
       : `${slugify(meta.slugHint)}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
     if (req.body.fileName && req.body.fileName.trim()) resolved.fileLabel = req.body.fileName.trim();
-    await saveResumeFiles(req.profileId, slug, resolved);
+    await saveResumeFiles(req.uid, slug, resolved);
 
     res.json({
       slug,
       title: resolved.title,
       language: resolved.language,
-      pdfUrl: `/output/${req.profileId}/${slug}.pdf`
+      pdfUrl: `/output/${req.uid}/${slug}.pdf`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -368,10 +316,10 @@ app.post('/api/profiles/:profileId/resumes/import', upload.single('resume'), asy
 
 // Traduz um currículo já gerado pro outro idioma, salvando como uma nova
 // entrada separada (não sobrescreve a versão original).
-app.post('/api/profiles/:profileId/resumes/:slug/translate', async (req, res) => {
+app.post('/api/resumes/:slug/translate', async (req, res) => {
   const slug = path.basename(req.params.slug);
   try {
-    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    const jsonPath = path.join(userOutputDir(req.uid), `${slug}.json`);
     if (!fs.existsSync(jsonPath)) {
       res.status(404).json({ error: 'Currículo não encontrado.' });
       return;
@@ -384,13 +332,13 @@ app.post('/api/profiles/:profileId/resumes/:slug/translate', async (req, res) =>
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const newSlug = `${baseSlug}-${targetLanguage}-${timestamp}`;
 
-    await saveResumeFiles(req.profileId, newSlug, translated);
+    await saveResumeFiles(req.uid, newSlug, translated);
 
     res.json({
       slug: newSlug,
       title: translated.title,
       language: translated.language,
-      pdfUrl: `/output/${req.profileId}/${newSlug}.pdf`
+      pdfUrl: `/output/${req.uid}/${newSlug}.pdf`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -400,11 +348,11 @@ app.post('/api/profiles/:profileId/resumes/:slug/translate', async (req, res) =>
 // Gera (ou regenera) só o roteiro de apresentação em vídeo pra um currículo já
 // existente, usando instruções de vídeo opcionais. Não salva no disco — só
 // devolve o texto pro usuário revisar/editar antes de clicar em Salvar.
-app.post('/api/profiles/:profileId/resumes/:slug/script', async (req, res) => {
+app.post('/api/resumes/:slug/script', async (req, res) => {
   const slug = path.basename(req.params.slug);
   const { videoInstructions } = req.body || {};
   try {
-    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    const jsonPath = path.join(userOutputDir(req.uid), `${slug}.json`);
     if (!fs.existsSync(jsonPath)) {
       res.status(404).json({ error: 'Currículo não encontrado.' });
       return;
@@ -420,10 +368,10 @@ app.post('/api/profiles/:profileId/resumes/:slug/script', async (req, res) => {
 // Gera (ou regenera) só a carta de apresentação pra um currículo já existente.
 // Mesmo padrão da rota /script acima: não salva no disco, só devolve o texto
 // pro usuário revisar/editar antes de clicar em Salvar.
-app.post('/api/profiles/:profileId/resumes/:slug/cover-letter', async (req, res) => {
+app.post('/api/resumes/:slug/cover-letter', async (req, res) => {
   const slug = path.basename(req.params.slug);
   try {
-    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    const jsonPath = path.join(userOutputDir(req.uid), `${slug}.json`);
     if (!fs.existsSync(jsonPath)) {
       res.status(404).json({ error: 'Currículo não encontrado.' });
       return;
@@ -436,14 +384,14 @@ app.post('/api/profiles/:profileId/resumes/:slug/cover-letter', async (req, res)
   }
 });
 
-// Alguns PDFs em output/<perfil>/ não têm um .json correspondente (ex:
+// Alguns PDFs em output/<uid>/ não têm um .json correspondente (ex:
 // adicionados manualmente, fora do fluxo normal do sistema). Essa rota extrai
 // o texto do PDF já existente no disco e gera o .json estruturado pra esse
 // mesmo slug, permitindo editar esse currículo dali pra frente.
-app.post('/api/profiles/:profileId/resumes/:slug/repair', async (req, res) => {
+app.post('/api/resumes/:slug/repair', async (req, res) => {
   const slug = path.basename(req.params.slug);
   try {
-    const pdfPath = path.join(profileOutputDir(req.profileId), `${slug}.pdf`);
+    const pdfPath = path.join(userOutputDir(req.uid), `${slug}.pdf`);
     if (!fs.existsSync(pdfPath)) {
       res.status(404).json({ error: 'PDF não encontrado.' });
       return;
@@ -456,7 +404,7 @@ app.post('/api/profiles/:profileId/resumes/:slug/repair', async (req, res) => {
     }
 
     const { resolved } = await importResumeFromText(text);
-    const jsonPath = path.join(profileOutputDir(req.profileId), `${slug}.json`);
+    const jsonPath = path.join(userOutputDir(req.uid), `${slug}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify(resolved, null, 2), 'utf8');
 
     res.json({ ok: true, resolved });

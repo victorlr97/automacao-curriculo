@@ -17,7 +17,6 @@ import { TextField } from '../ui/TextField';
 import { ResumePreviewDocument } from '../workspace/ResumePreviewDocument';
 
 interface ResumeAccordionEditorProps {
-  profileId: string;
   item: ResumeListItem;
   onResumeMutated: (newSlug: string) => Promise<void>;
 }
@@ -26,7 +25,7 @@ interface ResumeAccordionEditorProps {
  * documento à direita — a mesma prévia atualiza a cada tecla porque lê
  * diretamente do estado `resolved` que os campos editam, sem precisar salvar
  * primeiro (ao contrário do fluxo antigo de "Salvar e depois ver"). */
-export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: ResumeAccordionEditorProps) {
+export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordionEditorProps) {
   const [resolved, setResolved] = useState<ResolvedResume | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -78,7 +77,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
     setStatus('Extraindo conteúdo do PDF... (pode levar até 1 minuto)');
     setError(false);
     try {
-      const { resolved: data } = await api.repairResume(profileId, item.slug);
+      const { resolved: data } = await api.repairResume(item.slug);
       setResolved(data);
       setNotFound(false);
       setStatus('');
@@ -94,7 +93,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
     setStatus('Salvando e gerando PDF...');
     setError(false);
     try {
-      const res = await api.updateResume(profileId, slug, { ...resolved, fileName });
+      const res = await api.updateResume(slug, { ...resolved, fileName });
       setSlug(res.slug);
       setFileName(res.slug);
       setStatus(res.slug !== slug ? `Salvo como um novo arquivo: "${res.slug}".` : 'Salvo! PDF atualizado.');
@@ -112,7 +111,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
     setScriptGenerating(true);
     setScriptStatus('');
     try {
-      const { presentationScript } = await api.generateScript(profileId, slug, videoInstructions);
+      const { presentationScript } = await api.generateScript(slug, videoInstructions);
       update({ presentationScript });
     } catch (err) {
       setScriptStatus(`Erro: ${(err as Error).message}`);
@@ -126,7 +125,7 @@ export function ResumeAccordionEditor({ profileId, item, onResumeMutated }: Resu
     setCoverLetterGenerating(true);
     setCoverLetterStatus('');
     try {
-      const { coverLetter } = await api.generateCoverLetter(profileId, slug);
+      const { coverLetter } = await api.generateCoverLetter(slug);
       update({ coverLetter });
     } catch (err) {
       setCoverLetterStatus(`Erro: ${(err as Error).message}`);

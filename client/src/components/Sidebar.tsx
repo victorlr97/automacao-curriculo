@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ChevronsLeft, ChevronsRight, FileText, FolderOpen, User } from 'lucide-react';
-import { ProfileSwitcher } from './ProfileSwitcher';
+import { ChevronsLeft, ChevronsRight, FileText, FolderOpen, LogOut, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export type Destination = 'database' | 'workspace' | 'outputs';
 
@@ -18,6 +18,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ active, onChange }: SidebarProps) {
+  const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_STORAGE_KEY) === '1');
 
   function toggleCollapsed() {
@@ -69,7 +70,17 @@ export function Sidebar({ active, onChange }: SidebarProps) {
       </nav>
 
       <div className="mt-auto border-t border-border p-4">
-        <ProfileSwitcher collapsed={collapsed} />
+        <button
+          type="button"
+          onClick={signOut}
+          title={collapsed ? `Sair (${user?.email})` : undefined}
+          className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-ink-soft transition-colors hover:bg-bg hover:text-ink ${
+            collapsed ? 'justify-center' : ''
+          }`}
+        >
+          <LogOut size={16} />
+          {!collapsed && <span className="truncate">{user?.email}</span>}
+        </button>
       </div>
     </aside>
   );
