@@ -19,14 +19,14 @@
 
 ## Fases
 
-### Fase 1 — Firebase (Auth + Dados)
-- [ ] Criar projeto Firebase
-- [ ] Configurar Firebase Auth (email/senha ou login Google)
-- [ ] Modelar Firestore (`users` → `profiles` → `resumes`, substituindo `data/profiles/*.json`)
-- [ ] Migrar leitura/escrita do `database.json` local para Firestore
-- [ ] Migrar armazenamento dos PDFs gerados para Firebase Storage
-- [ ] Middleware de autenticação no Express (verificar token Firebase nas rotas `/api`)
-- [ ] Atualizar client para fluxo de login/logout
+### Fase 1 — Firebase (Auth + Dados) — concluída em 2026-07-28
+- [x] Criar projeto Firebase (`automacao-curriculo-app`)
+- [x] Configurar Firebase Auth (e-mail/senha)
+- [x] Modelar Firestore — ajustado em relação ao plano original: como virou 1 conta = 1 perfil, o documento `users/{uid}` guarda o banco de fatos direto, sem subcoleções `profiles`/`resumes`
+- [x] Migrar leitura/escrita do `database.json` local para Firestore
+- [ ] Migrar armazenamento dos PDFs gerados para Firebase Storage — adiado de propósito pra Fase 2; por enquanto PDFs continuam em `output/<uid>/` local, isolados por conta via o middleware de autenticação
+- [x] Middleware de autenticação no Express (verificar token Firebase nas rotas `/api`)
+- [x] Atualizar client para fluxo de login/logout
 
 ### Fase 2 — Deploy (beta fechado)
 - [ ] Escolher hospedagem (precisa suportar Puppeteer + spawn de processo CLI)
@@ -54,4 +54,4 @@
 
 ## Status
 
-Ainda não iniciado — próximo passo é começar a Fase 1.
+Fase 1 concluída (login por e-mail/senha + Firestore em produção no Firebase). Próximo passo é a Fase 2 (deploy em beta fechado).
