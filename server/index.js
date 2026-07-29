@@ -193,7 +193,7 @@ async function saveResumeFiles(uid, slug, resolved) {
 }
 
 app.post('/api/resumes/generate', async (req, res) => {
-  const { jobDescription, fileName, videoInstructions } = req.body || {};
+  const { jobDescription, fileName } = req.body || {};
   if (!jobDescription || !jobDescription.trim()) {
     res.status(400).json({ error: 'Cole a descrição da vaga antes de gerar.' });
     return;
@@ -201,7 +201,7 @@ app.post('/api/resumes/generate', async (req, res) => {
 
   try {
     const database = await getOrCreateDatabase(req.uid, req.userEmail);
-    const { resolved, meta } = await generateResumeData(database, jobDescription, videoInstructions);
+    const { resolved, meta } = await generateResumeData(database, jobDescription);
     const slug = fileName && fileName.trim()
       ? await uniqueSlug(req.uid, slugify(fileName))
       : `${slugify(meta.slugHint)}-${new Date().toISOString().replace(/[:.]/g, '-')}`;

@@ -86,8 +86,6 @@ const RESUME_SCHEMA = {
         required: ['name', 'level']
       }
     },
-    presentationScript: { type: 'string' },
-    coverLetter: { type: 'string' },
     meta: {
       type: 'object',
       properties: {
@@ -98,7 +96,7 @@ const RESUME_SCHEMA = {
       required: ['profile', 'slugHint', 'resumo']
     }
   },
-  required: ['language', 'title', 'contactLocation', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'skills', 'languages', 'presentationScript', 'coverLetter', 'meta']
+  required: ['language', 'title', 'contactLocation', 'objective', 'experience', 'projects', 'education', 'additionalEducation', 'skills', 'languages', 'meta']
 };
 
 const RESUME_IMPORT_SCHEMA = {
@@ -443,7 +441,7 @@ function coverLetterStyleRules(name) {
 - Mesmo idioma do resto do currículo (saudação e despedida também traduzidas pro idioma certo).`;
 }
 
-function buildPrompt(database, jobDescription, videoInstructions) {
+function buildPrompt(database, jobDescription) {
   const name = (database.personal && database.personal.name) || 'a pessoa candidata';
   return `Você vai COMPOR um currículo NOVO e específico para a vaga abaixo, a partir de fatos brutos sobre a carreira de ${name}. Isso não é uma escolha entre currículos prontos — é uma composição livre: leia todos os fatos disponíveis e decida você mesmo quais usar, como combiná-los e como redigir o texto final, de acordo com o que essa vaga específica pede.
 
@@ -458,10 +456,6 @@ ${JSON.stringify(database, null, 2)}
 ## Vaga colada pelo usuário
 
 ${jobDescription}
-
-## Instruções específicas pro vídeo (fornecidas pelo usuário, separadas da vaga)
-
-${videoInstructions && videoInstructions.trim() ? videoInstructions : '(nenhuma — use a estrutura padrão descrita no item sobre presentationScript)'}
 
 ## Como compor o currículo
 
@@ -478,13 +472,7 @@ ${videoInstructions && videoInstructions.trim() ? videoInstructions : '(nenhuma 
 10. "education": database.education é uma lista (pode ter mais de uma formação formal — graduação, pós-graduação, mestrado etc). Inclua TODOS os itens, na mesma ordem do banco — formação formal não é filtrada por relevância como experience/projects, é sempre mostrada. Para cada item, adapte degree pro idioma certo, mantendo os fatos (institution e period não mudam).
 11. "additionalEducation": se database.additional_education existir, decida quais itens agregam pra essa vaga (geralmente vale manter todos, já que cursos complementares reforçam credibilidade sem ocupar muito espaço — mas pode omitir os claramente irrelevantes se a lista for longa). Institution não muda; adapte description pro idioma certo. Se o banco não tiver esse campo, retorne lista vazia.
 12. "languages": adapte name e level pro idioma certo (ex: "Português (Nativo)" -> "Portuguese (Native)" se a vaga for em inglês).
-13. "presentationScript": muitas vagas internacionais pedem um vídeo curto de apresentação, às vezes com um roteiro específico do que cobrir (perguntas, pontos obrigatórios, duração pedida). Se o usuário forneceu "Instruções específicas pro vídeo" (ver seção abaixo), use isso como guia principal — responda aos pontos pedidos, na ordem pedida, sempre baseado em fatos reais do banco (nunca invente uma resposta pra um ponto sem fato correspondente; nesse caso responda de forma genérica e honesta em vez de inventar, ou simplesmente não force uma resposta artificial). Se a vaga pedir uma duração diferente do padrão, siga a duração pedida. Se NÃO houver instruções específicas, use a estrutura padrão: quem é ${name} (nome + resumo de background), a trajetória profissional até aqui (ex: uma transição de carreira, se os fatos do banco indicarem uma), 1-2 projetos ou experiências mais relevantes pra ESSA vaga específica, e por que esse perfil se encaixa na vaga. Duração alvo nesse caso: 30 segundos a 2 minutos falado (aproximadamente 90 a 260 palavras).
-
-${presentationScriptStyleRules(name)}
-14. "coverLetter": carta de apresentação curta pra mandar junto com o currículo (email ou formulário de candidatura).
-
-${coverLetterStyleRules(name)}
-15. meta.profile: uma descrição curta e específica do perfil que você montou pra essa vaga (não precisa ser uma das 3 categorias clássicas — pode ser algo como "Full Stack com diferencial em Design Gráfico" se for o caso real). meta.slugHint: identificador curto pra nome de arquivo (baseado na empresa se aparecer na vaga, senão no cargo — só letras minúsculas, números e hífen, sem espaços/acentos). meta.resumo: 1-2 frases em português explicando as escolhas feitas (aparece pro usuário na interface, não entra no PDF).
+13. meta.profile: uma descrição curta e específica do perfil que você montou pra essa vaga (não precisa ser uma das 3 categorias clássicas — pode ser algo como "Full Stack com diferencial em Design Gráfico" se for o caso real). meta.slugHint: identificador curto pra nome de arquivo (baseado na empresa se aparecer na vaga, senão no cargo — só letras minúsculas, números e hífen, sem espaços/acentos). meta.resumo: 1-2 frases em português explicando as escolhas feitas (aparece pro usuário na interface, não entra no PDF).
 
 Retorne o objeto preenchendo exatamente o schema fornecido.`;
 }
@@ -553,9 +541,9 @@ function runClaude(prompt, schema, effort = 'high') {
   });
 }
 
-async function generateResumeData(rawDatabase, jobDescription, videoInstructions) {
+async function generateResumeData(rawDatabase, jobDescription) {
   const database = { ...rawDatabase, education: toEducationArray(rawDatabase.education) };
-  const prompt = buildPrompt(database, jobDescription, videoInstructions);
+  const prompt = buildPrompt(database, jobDescription);
   const structured = await runClaude(prompt, RESUME_SCHEMA);
 
   const resolved = {
