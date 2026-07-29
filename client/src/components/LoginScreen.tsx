@@ -187,11 +187,12 @@ function usePinnedScenes(count: number) {
 }
 
 export function LoginScreen() {
-  const { signIn, signUp, error } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const { signIn, signUp, resetPassword, error } = useAuth();
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const scenes = usePinnedScenes(SCENES.length);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -200,14 +201,22 @@ export function LoginScreen() {
     try {
       if (mode === 'login') {
         await signIn(email, password);
-      } else {
+      } else if (mode === 'signup') {
         await signUp(email, password);
+      } else {
+        await resetPassword(email);
+        setResetSent(true);
       }
     } catch {
       // erro já fica disponível via useAuth().error
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const goToMode = (next: 'login' | 'signup' | 'reset') => {
+    setMode(next);
+    setResetSent(false);
   };
 
   const transitionClass =
@@ -257,25 +266,58 @@ export function LoginScreen() {
             <LogIn size={40} className="mx-auto mb-4 text-ink-faint" strokeWidth={1.5} />
             <h1 className="mb-2 text-lg font-bold text-ink">Gerador de Currículo</h1>
             <p className="text-sm text-ink-soft">
-              {mode === 'login' ? 'Entre com sua conta pra continuar.' : 'Crie sua conta pra começar.'}
+              {mode === 'login'
+                ? 'Entre com sua conta pra continuar.'
+                : mode === 'signup'
+                  ? 'Crie sua conta pra começar.'
+                  : 'Informe seu e-mail pra receber o link de redefinição.'}
             </p>
           </div>
           <Card>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <TextField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="voce@email.com" />
-              <TextField label="Senha" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
-              <StatusMessage error>{error}</StatusMessage>
-              <Button type="submit" variant="primary" disabled={submitting} className="w-full justify-center">
-                {submitting ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
-              </Button>
-            </form>
+            {mode === 'reset' && resetSent ? (
+              <StatusMessage>
+                {`Se ${email} tiver uma conta, um link de redefinição de senha foi enviado pra lá. Confira também a caixa de spam.`}
+              </StatusMessage>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <TextField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="voce@email.com" />
+                {mode !== 'reset' && (
+                  <TextField
+                    label="Senha"
+                    type="password"
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="••••••••"
+                  />
+                )}
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => goToMode('reset')}
+                    className="-mt-2 self-end text-xs text-ink-soft hover:text-accent"
+                  >
+                    Esqueci minha senha
+                  </button>
+                )}
+                <StatusMessage error>{error}</StatusMessage>
+                <Button type="submit" variant="primary" disabled={submitting} className="w-full justify-center">
+                  {submitting
+                    ? 'Aguarde...'
+                    : mode === 'login'
+                      ? 'Entrar'
+                      : mode === 'signup'
+                        ? 'Criar conta'
+                        : 'Enviar link de redefinição'}
+                </Button>
+              </form>
+            )}
           </Card>
           <button
             type="button"
-            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            onClick={() => goToMode(mode === 'signup' ? 'login' : mode === 'reset' ? 'login' : 'signup')}
             className="mt-4 w-full text-center text-sm text-ink-soft hover:text-accent"
           >
-            {mode === 'login' ? 'Não tem conta? Criar uma agora' : 'Já tem conta? Entrar'}
+            {mode === 'signup' ? 'Já tem conta? Entrar' : mode === 'reset' ? 'Voltar para login' : 'Não tem conta? Criar uma agora'}
           </button>
         </div>
       </div>

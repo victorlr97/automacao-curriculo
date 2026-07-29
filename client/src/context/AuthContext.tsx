@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User
@@ -15,6 +16,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -73,9 +75,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    setError('');
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err) {
+      const code = (err as { code?: string })?.code || '';
+      // "user-not-found" fica em silêncio de propósito: não dá pra vazar pra quem
+      // está tentando se essa conta existe ou não.
+      if (code === 'auth/user-not-found') return;
+      setError(translateAuthError(err));
+      throw err;
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, error, signIn, signUp, signOut }),
-    [user, loading, error, signIn, signUp, signOut]
+    () => ({ user, loading, error, signIn, signUp, signOut, resetPassword }),
+    [user, loading, error, signIn, signUp, signOut, resetPassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
