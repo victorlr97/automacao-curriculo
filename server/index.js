@@ -38,6 +38,18 @@ function slugify(text) {
 // conta. O uid vem de um token do Firebase verificado no servidor — nunca de
 // algo que o cliente escolhe na URL. ----------
 
+// Enquanto o motor de IA for a CLI do Claude Code (assinatura pessoal, não
+// API paga por token), o acesso fica restrito a uma lista de e-mails —
+// gerenciada em config/allowlist no Firestore (ver scripts/manage-allowlist.js).
+// Ter uma conta no Firebase Auth não basta: sem estar na lista, nenhuma rota
+// /api responde, mesmo que o login em si tenha funcionado.
+async function isEmailAllowed(email) {
+  if (!email) return false;
+  const snap = await db.collection('config').doc('allowlist').get();
+  const emails = snap.exists ? snap.data().emails || [] : [];
+  return emails.includes(email.toLowerCase());
+}
+
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const match = header.match(/^Bearer (.+)$/);
@@ -47,8 +59,13 @@ async function requireAuth(req, res, next) {
   }
   try {
     const decoded = await auth.verifyIdToken(match[1]);
+    const email = decoded.email || '';
+    if (!(await isEmailAllowed(email))) {
+      res.status(403).json({ error: 'Sua conta ainda não foi liberada pra usar o app. Entre em contato com o administrador.' });
+      return;
+    }
     req.uid = decoded.uid;
-    req.userEmail = decoded.email || '';
+    req.userEmail = email;
     next();
   } catch (err) {
     res.status(401).json({ error: 'Sessão inválida ou expirada. Faça login novamente.' });

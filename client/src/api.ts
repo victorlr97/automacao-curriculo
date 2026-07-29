@@ -15,13 +15,24 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/** Erro de API com o status HTTP anexado, pra quem chama poder diferenciar
+ * "conta não autorizada" (403, allowlist) de outras falhas sem depender do
+ * texto da mensagem. */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: { ...(await authHeaders()), ...(init.headers || {}) }
   });
   const data = await res.json();
-  if (!res.ok) throw new Error((data as ApiErrorBody).error || 'Erro desconhecido.');
+  if (!res.ok) throw new ApiError((data as ApiErrorBody).error || 'Erro desconhecido.', res.status);
   return data as T;
 }
 
