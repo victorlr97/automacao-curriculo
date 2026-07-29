@@ -28,7 +28,7 @@
 - [x] Middleware de autenticação no Express (verificar token Firebase nas rotas `/api`)
 - [x] Atualizar client para fluxo de login/logout
 
-### Fase 2 — Deploy — concluída em 2026-07-28 (com uma pendência)
+### Fase 2 — Deploy — concluída em 2026-07-28
 - [x] Escolher hospedagem — **Render**, não Oracle como cogitado inicialmente (menos trabalho de infra depois que os PDFs migraram pro Firebase Storage, que passou a ser necessário pelo disco efêmero do Render)
 - [x] `server/index.js` — porta via `process.env.PORT`, bind em `0.0.0.0`
 - [x] `server/index.js` — auto-open do navegador condicionado a `process.platform === 'win32'`
@@ -36,7 +36,7 @@
 - [x] Currículos gerados migrados de disco local pra Firestore (`users/{uid}/resumes/{slug}`) + Storage (`resumes/{uid}/{slug}.pdf`, servido via signed URL)
 - [x] Variáveis de ambiente e segredos configurados no Render (Secret Files pra chave da Admin SDK e sessão da CLI do Claude)
 - [x] Testado ponta a ponta em produção: login, banco de fatos, geração de currículo com IA, PDF — tudo via conta de teste descartável
-- [ ] **Restringir acesso (allowlist de e-mail/convite)** — ainda não feito. Hoje `https://automacao-curriculo.onrender.com` tem cadastro aberto pra qualquer e-mail; a razão original de manter isso fechado (a CLI do Claude roda sob a assinatura pessoal, um uso público sem controle pode estourar limite) continua valendo. Fica como próximo passo antes de compartilhar o link amplamente.
+- [x] **Restringir acesso** — middleware do servidor checa o e-mail contra `config/allowlist` no Firestore antes de qualquer rota `/api`; ter conta no Firebase Auth não basta mais. Gerenciado por `scripts/manage-allowlist.js` ou direto pelo console do Firebase.
 - [ ] Acompanhar uso da assinatura Claude Code pra não estourar limite — sem automação, é acompanhar manualmente por enquanto.
 
 Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.md](JORNADA.md).
@@ -57,4 +57,4 @@ Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.
 
 ## Status
 
-Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com. Pendência de segurança antes de divulgar o link: restringir o cadastro (hoje está aberto). Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n).
+Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com, acesso restrito por allowlist. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.
