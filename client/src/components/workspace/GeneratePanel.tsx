@@ -13,8 +13,6 @@ export function GeneratePanel({ generator }: GeneratePanelProps) {
   const {
     jobDescription,
     setJobDescription,
-    videoInstructions,
-    setVideoInstructions,
     fileName,
     setFileName,
     status,
@@ -25,7 +23,7 @@ export function GeneratePanel({ generator }: GeneratePanelProps) {
   } = generator;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto border-l border-border bg-white p-4">
+    <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-white p-4">
       <h3 className="mb-3 text-base font-bold">Gerar pra uma vaga</h3>
       <div className="flex flex-col gap-3">
         <TextArea
@@ -34,13 +32,6 @@ export function GeneratePanel({ generator }: GeneratePanelProps) {
           value={jobDescription}
           onChange={setJobDescription}
           placeholder="Cole aqui o texto completo da vaga (requisitos, stack, responsabilidades...)"
-        />
-        <TextArea
-          label="Roteiro do vídeo (opcional)"
-          rows={3}
-          value={videoInstructions}
-          onChange={setVideoInstructions}
-          placeholder="Se a vaga der instruções específicas do que o vídeo de apresentação deve cobrir, cole aqui."
         />
         <TextField
           label="Nome do arquivo (opcional)"
