@@ -3,7 +3,7 @@ import type { ResolvedResume } from '../../types';
 
 const LABELS: Record<ResolvedResume['language'], Record<string, string>> = {
   pt: {
-    objective: 'OBJETIVO PROFISSIONAL',
+    objective: 'SOBRE',
     experience: 'EXPERIÊNCIA',
     projects: 'PROJETOS',
     education: 'FORMAÇÃO',
@@ -14,7 +14,7 @@ const LABELS: Record<ResolvedResume['language'], Record<string, string>> = {
     portfolioIntro: 'Veja meu trabalho aqui:'
   },
   en: {
-    objective: 'PROFESSIONAL OBJECTIVE',
+    objective: 'ABOUT',
     experience: 'EXPERIENCE',
     projects: 'PROJECTS',
     education: 'EDUCATION',

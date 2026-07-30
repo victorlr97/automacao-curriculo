@@ -23,7 +23,7 @@ function toUrl(value) {
 
 const LABELS = {
   pt: {
-    objective: 'OBJETIVO PROFISSIONAL',
+    objective: 'SOBRE',
     experience: 'EXPERIÊNCIA',
     projects: 'PROJETOS',
     education: 'FORMAÇÃO',
@@ -34,7 +34,7 @@ const LABELS = {
     portfolioIntro: 'Veja meu trabalho aqui:'
   },
   en: {
-    objective: 'PROFESSIONAL OBJECTIVE',
+    objective: 'ABOUT',
     experience: 'EXPERIENCE',
     projects: 'PROJECTS',
     education: 'EDUCATION',

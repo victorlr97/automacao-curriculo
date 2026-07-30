@@ -143,8 +143,8 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
           <TextField label="Título (aparece no currículo)" value={resolved.title} onChange={v => update({ title: v })} />
         </AccordionSection>
 
-        <AccordionSection id="objective" title="Objetivo" open={expanded === 'objective'} onToggle={() => toggle('objective')}>
-          <TextArea label="Objetivo" rows={6} value={resolved.objective} onChange={v => update({ objective: v })} />
+        <AccordionSection id="objective" title="Sobre" open={expanded === 'objective'} onToggle={() => toggle('objective')}>
+          <TextArea label="Sobre" rows={6} value={resolved.objective} onChange={v => update({ objective: v })} />
         </AccordionSection>
 
         <AccordionSection

@@ -59,7 +59,7 @@ export function ResumeEditForm({
       <TextField label="Nome do arquivo (PDF/JSON)" value={fileName} onChange={onFileNameChange} />
       <TextField label="Título (aparece no currículo)" value={data.title} onChange={v => update({ title: v })} />
       <div id="section-objective">
-        <TextArea label="Objetivo" rows={5} value={data.objective} onChange={v => update({ objective: v })} />
+        <TextArea label="Sobre" rows={5} value={data.objective} onChange={v => update({ objective: v })} />
       </div>
       <TextArea
         label="Texto de apresentação (vídeo, opcional)"
