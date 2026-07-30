@@ -1,14 +1,17 @@
 import { Building2, GraduationCap } from 'lucide-react';
-import type { AdditionalEducationEntry, EducationEntry, ExperienceEntry, LanguageEntry, ProjectEntry } from '../../types';
+import type { AdditionalEducationEntry, EducationEntry, ExperienceEntry, LanguageEntry, ProfileDatabase, ProjectEntry } from '../../types';
 import { makeListEditor } from '../../listEditor';
 import { Button } from '../ui/Button';
 import { FieldGrid } from '../ui/Card';
+import { ChipListField } from '../ui/ChipListField';
 import { CollapsibleEntry } from '../ui/CollapsibleEntry';
 import { LanguageEntryRow } from '../ui/LanguageEntryRow';
 import { PeriodField } from '../ui/PeriodField';
 import { StackField } from '../ui/StackField';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
+import { AddEntryButton } from './AddEntryButton';
+import { AddFromDatabaseButton } from './AddFromDatabaseButton';
 
 export function blankExperience(): ExperienceEntry {
   return { company: '', location: '', role: '', period: '', description: '' };
@@ -33,13 +36,18 @@ export function blankLanguage(): LanguageEntry {
 export function ExperienceFields({
   items,
   onChange,
-  language = 'pt'
+  language = 'pt',
+  database
 }: {
   items: ExperienceEntry[];
   onChange: (items: ExperienceEntry[]) => void;
   language?: 'pt' | 'en';
+  database?: ProfileDatabase | null;
 }) {
   const experience = makeListEditor(items, onChange);
+  const availableFromDatabase = (database?.experience ?? []).filter(
+    fact => !items.some(item => item.company === fact.company && item.role === fact.role)
+  );
   return (
     <>
       {experience.items.map((exp, idx) => (
@@ -60,15 +68,41 @@ export function ExperienceFields({
           <TextArea label="Descrição" value={exp.description} onChange={v => experience.updateAt(idx, { description: v })} />
         </CollapsibleEntry>
       ))}
-      <Button variant="add" onClick={() => experience.add(blankExperience())}>
-        + Adicionar experiência
-      </Button>
+      <AddEntryButton
+        label="+ Adicionar experiência"
+        options={availableFromDatabase.map(fact => ({
+          key: `${fact.company}-${fact.role}`,
+          title: fact.role || fact.company,
+          subtitle: fact.company,
+          value: fact
+        }))}
+        onPickOption={fact =>
+          experience.add({
+            company: fact.company,
+            location: fact.location,
+            role: fact.role,
+            period: fact.period,
+            description: fact.facts.join('. ')
+          })
+        }
+        onAddBlank={() => experience.add(blankExperience())}
+        blankLabel="Adicionar em branco"
+      />
     </>
   );
 }
 
-export function ProjectsFields({ items, onChange }: { items: ProjectEntry[]; onChange: (items: ProjectEntry[]) => void }) {
+export function ProjectsFields({
+  items,
+  onChange,
+  database
+}: {
+  items: ProjectEntry[];
+  onChange: (items: ProjectEntry[]) => void;
+  database?: ProfileDatabase | null;
+}) {
   const projects = makeListEditor(items, onChange);
+  const availableFromDatabase = (database?.projects ?? []).filter(fact => !items.some(item => item.name === fact.name));
   return (
     <>
       {projects.items.map((proj, idx) => (
@@ -86,10 +120,50 @@ export function ProjectsFields({ items, onChange }: { items: ProjectEntry[]; onC
           <TextArea label="Descrição" value={proj.description} onChange={v => projects.updateAt(idx, { description: v })} />
         </CollapsibleEntry>
       ))}
-      <Button variant="add" onClick={() => projects.add(blankProject())}>
-        + Adicionar projeto
-      </Button>
+      <AddEntryButton
+        label="+ Adicionar projeto"
+        options={availableFromDatabase.map(fact => ({
+          key: fact.id,
+          title: fact.name,
+          subtitle: fact.stack.join(', '),
+          value: fact
+        }))}
+        onPickOption={fact =>
+          projects.add({
+            name: fact.name,
+            role: '',
+            stack: fact.stack,
+            description: fact.facts.join('. ')
+          })
+        }
+        onAddBlank={() => projects.add(blankProject())}
+        blankLabel="Adicionar em branco"
+      />
     </>
+  );
+}
+
+export function SkillsField({
+  items,
+  onChange,
+  database
+}: {
+  items: string[];
+  onChange: (items: string[]) => void;
+  database?: ProfileDatabase | null;
+}) {
+  const availableFromDatabase = (database?.skills ?? []).filter(skill => !items.includes(skill));
+  return (
+    <div className="flex flex-col gap-2">
+      <ChipListField items={items} onChange={onChange} />
+      <div>
+        <AddFromDatabaseButton
+          label="+ Do banco de dados"
+          options={availableFromDatabase.map(skill => ({ key: skill, title: skill, value: skill }))}
+          onPick={skill => onChange([...items, skill])}
+        />
+      </div>
+    </div>
   );
 }
 

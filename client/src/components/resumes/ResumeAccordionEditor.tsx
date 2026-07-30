@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import * as api from '../../api';
-import type { ResolvedResume, ResumeListItem } from '../../types';
+import type { ProfileDatabase, ResolvedResume, ResumeListItem } from '../../types';
 import {
   AdditionalEducationFields,
   EducationFields,
   ExperienceFields,
   LanguagesFields,
-  ProjectsFields
+  ProjectsFields,
+  SkillsField
 } from '../resume-fields/ResumeSectionFields';
 import { AccordionSection } from '../ui/AccordionSection';
 import { Button } from '../ui/Button';
-import { ChipListField } from '../ui/ChipListField';
 import { StatusMessage } from '../ui/StatusMessage';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
@@ -27,6 +27,7 @@ interface ResumeAccordionEditorProps {
  * primeiro (ao contrário do fluxo antigo de "Salvar e depois ver"). */
 export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordionEditorProps) {
   const [resolved, setResolved] = useState<ResolvedResume | null>(null);
+  const [database, setDatabase] = useState<ProfileDatabase | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [slug, setSlug] = useState(item.slug);
@@ -61,6 +62,13 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.slug]);
+
+  // Banco de fatos completo, carregado à parte pra alimentar o "+ Do banco de
+  // dados" nos campos de experiência/projetos/habilidades — se falhar, os
+  // botões simplesmente não aparecem, sem bloquear o resto do editor.
+  useEffect(() => {
+    api.getDatabase().then(setDatabase).catch(() => {});
+  }, []);
 
   function update(patch: Partial<ResolvedResume>) {
     if (!resolved) return;
@@ -154,7 +162,12 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
           open={expanded === 'experience'}
           onToggle={() => toggle('experience')}
         >
-          <ExperienceFields items={resolved.experience} onChange={experience => update({ experience })} language={resolved.language} />
+          <ExperienceFields
+            items={resolved.experience}
+            onChange={experience => update({ experience })}
+            language={resolved.language}
+            database={database}
+          />
         </AccordionSection>
 
         <AccordionSection
@@ -164,7 +177,7 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
           open={expanded === 'projects'}
           onToggle={() => toggle('projects')}
         >
-          <ProjectsFields items={resolved.projects} onChange={projects => update({ projects })} />
+          <ProjectsFields items={resolved.projects} onChange={projects => update({ projects })} database={database} />
         </AccordionSection>
 
         <AccordionSection
@@ -197,7 +210,7 @@ export function ResumeAccordionEditor({ item, onResumeMutated }: ResumeAccordion
           open={expanded === 'skills'}
           onToggle={() => toggle('skills')}
         >
-          <ChipListField items={resolved.skills} onChange={skills => update({ skills })} />
+          <SkillsField items={resolved.skills} onChange={skills => update({ skills })} database={database} />
         </AccordionSection>
 
         <AccordionSection

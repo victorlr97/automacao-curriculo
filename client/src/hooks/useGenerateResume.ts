@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as api from '../api';
-import type { GenerateResumeResponse, ResolvedResume } from '../types';
+import type { GenerateResumeResponse, ProfileDatabase, ResolvedResume } from '../types';
 
 export type PreviewMode = 'preview' | 'edit';
 
@@ -30,6 +30,14 @@ export function useGenerateResume() {
   const [scriptStatus, setScriptStatus] = useState('');
   const [coverLetterGenerating, setCoverLetterGenerating] = useState(false);
   const [coverLetterStatus, setCoverLetterStatus] = useState('');
+  const [database, setDatabase] = useState<ProfileDatabase | null>(null);
+
+  // Banco de fatos completo, carregado à parte pra alimentar o "+ Do banco de
+  // dados" no formulário de edição pós-geração — se falhar, os botões
+  // simplesmente não aparecem, sem bloquear o resto do fluxo.
+  useEffect(() => {
+    api.getDatabase().then(setDatabase).catch(() => {});
+  }, []);
 
   async function handleGenerate() {
     if (!jobDescription.trim()) {
@@ -133,6 +141,7 @@ export function useGenerateResume() {
     handleGenerate,
     resolved,
     setResolved,
+    database,
     mode,
     activeEditSection,
     editFileName,

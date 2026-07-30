@@ -1,14 +1,14 @@
-import type { ResolvedResume } from '../types';
+import type { ProfileDatabase, ResolvedResume } from '../types';
 import {
   AdditionalEducationFields,
   EducationFields,
   ExperienceFields,
   LanguagesFields,
-  ProjectsFields
+  ProjectsFields,
+  SkillsField
 } from './resume-fields/ResumeSectionFields';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { ChipListField } from './ui/ChipListField';
 import { StatusMessage } from './ui/StatusMessage';
 import { TextArea } from './ui/TextArea';
 import { TextField } from './ui/TextField';
@@ -16,6 +16,7 @@ import { TextField } from './ui/TextField';
 interface ResumeEditFormProps {
   data: ResolvedResume;
   onChange: (data: ResolvedResume) => void;
+  database?: ProfileDatabase | null;
   fileName: string;
   onFileNameChange: (v: string) => void;
   videoInstructions: string;
@@ -33,6 +34,7 @@ interface ResumeEditFormProps {
 export function ResumeEditForm({
   data,
   onChange,
+  database,
   fileName,
   onFileNameChange,
   videoInstructions,
@@ -110,12 +112,17 @@ export function ResumeEditForm({
       <h4 id="section-experience" className="text-base font-bold">
         Experiências
       </h4>
-      <ExperienceFields items={data.experience} onChange={experience => update({ experience })} language={data.language} />
+      <ExperienceFields
+        items={data.experience}
+        onChange={experience => update({ experience })}
+        language={data.language}
+        database={database}
+      />
 
       <h4 id="section-projects" className="text-base font-bold">
         Projetos
       </h4>
-      <ProjectsFields items={data.projects} onChange={projects => update({ projects })} />
+      <ProjectsFields items={data.projects} onChange={projects => update({ projects })} database={database} />
 
       <h4 id="section-education" className="text-base font-bold">
         Formação
@@ -130,7 +137,7 @@ export function ResumeEditForm({
       <h4 id="section-skills" className="text-base font-bold">
         Habilidades
       </h4>
-      <ChipListField items={data.skills} onChange={skills => update({ skills })} />
+      <SkillsField items={data.skills} onChange={skills => update({ skills })} database={database} />
 
       <h4 id="section-languages" className="text-base font-bold">
         Idiomas

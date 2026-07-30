@@ -56,6 +56,7 @@ export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
     result,
     resolved,
     setResolved,
+    database,
     mode,
     activeEditSection,
     editFileName,
@@ -134,6 +135,7 @@ export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
           <ResumeEditForm
             data={resolved}
             onChange={setResolved}
+            database={database}
             fileName={editFileName}
             onFileNameChange={setEditFileName}
             videoInstructions={editVideoInstructions}
