@@ -12,8 +12,8 @@ export function BackgroundSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Sobre Mim" icon={BookOpen}>
       <Hint>
-        Fatos brutos sobre sua trajetória — um por linha. A IA usa esses fatos pra escrever um objetivo profissional
-        novo a cada vaga, nunca um texto pronto.
+        Fatos brutos sobre sua trajetória. A IA usa esses fatos pra escrever um objetivo profissional
+        novo a cada vaga.
       </Hint>
       <LinesField
         label="Fatos (um por linha)"

@@ -16,7 +16,7 @@ export function PersonalSection({ db, onChange }: SectionProps) {
 
   return (
     <Card title="Dados Pessoais" icon={User}>
-      <Hint>Esses dados vão direto pro cabeçalho do currículo, do jeito que estão — a IA não reescreve nada aqui.</Hint>
+      <Hint>Esses dados vão direto pro cabeçalho do currículo, do jeito que estão. A IA não reescreve nada aqui.</Hint>
       <FieldGrid>
         <TextField label="Nome" value={p.name} onChange={v => update({ name: v })} />
         <TextField label="Idade" type="number" value={p.age} onChange={v => update({ age: v === '' ? 0 : Number(v) || 0 })} />

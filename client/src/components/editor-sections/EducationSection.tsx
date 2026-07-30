@@ -22,8 +22,7 @@ export function EducationSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Formação" icon={GraduationCap} tone="violet">
       <Hint>
-        Graduação, pós-graduação, mestrado etc — uma entrada por diploma/título. Todos aparecem no currículo, sem
-        filtro por vaga.
+        Graduação, pós-graduação, mestrado etc...
       </Hint>
       {education.items.map((edu, idx) => (
         <CollapsibleEntry

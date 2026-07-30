@@ -22,7 +22,7 @@ export function AdditionalEducationSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Formação Complementar" icon={Award} tone="violet">
       <Hint>
-        Cursos, certificações ou formação continuada além da sua graduação/pós principal — aparece numa seção
+        Cursos, certificações ou formação continuada além da sua graduação/pós principal. Aparece em uma seção
         separada no currículo.
       </Hint>
       {items.items.map((ed, idx) => (

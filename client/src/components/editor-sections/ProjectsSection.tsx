@@ -24,8 +24,7 @@ export function ProjectsSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Projetos" icon={FolderKanban} tone="teal">
       <Hint>
-        Fatos brutos de cada projeto — um por linha. A IA escolhe quais projetos entram e reescreve a descrição final
-        pra cada vaga.
+        Coloque aqui seus projetos mais relevantes em que você participou.
       </Hint>
       {projects.items.map((proj, idx) => (
         <CollapsibleEntry

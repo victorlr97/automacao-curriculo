@@ -1,9 +1,46 @@
 import { useEffect } from 'react';
-import { FileText } from 'lucide-react';
+import { Building2, FileText, FolderKanban, GraduationCap, Languages, Sparkles, User } from 'lucide-react';
 import type { useGenerateResume } from '../../hooks/useGenerateResume';
+import { TONE_STYLES, type Tone } from '../../theme';
 import { ResumeEditForm } from '../ResumeEditForm';
 import { Button } from '../ui/Button';
 import { ResumePreviewDocument } from './ResumePreviewDocument';
+
+const LOADING_ICONS: { icon: typeof User; tone: Tone }[] = [
+  { icon: Building2, tone: 'teal' },
+  { icon: Sparkles, tone: 'violet' },
+  { icon: User, tone: 'accent' },
+  { icon: GraduationCap, tone: 'violet' },
+  { icon: FolderKanban, tone: 'teal' },
+  { icon: Languages, tone: 'violet' }
+];
+
+function GeneratingState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-6 bg-bg p-8 text-center">
+      <div className="flex items-center gap-3">
+        {LOADING_ICONS.map(({ icon: Icon, tone }, idx) => {
+          const toneStyles = TONE_STYLES[tone];
+          return (
+            <span
+              key={idx}
+              className={`flex h-11 w-11 animate-icon-wave items-center justify-center rounded-xl ${toneStyles.badgeBg} ${toneStyles.badgeText}`}
+              style={{ animationDelay: `${idx * 150}ms` }}
+            >
+              <Icon size={20} strokeWidth={2} />
+            </span>
+          );
+        })}
+      </div>
+      <div>
+        <p className="text-sm font-bold text-ink">Gerando seu currículo...</p>
+        <p className="mt-1 max-w-[280px] text-sm text-ink-soft">
+          Isso pode levar até 2 minutos. A prévia aparece aqui assim que ficar pronta.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 interface LivePreviewColumnProps {
   generator: ReturnType<typeof useGenerateResume>;
@@ -15,6 +52,7 @@ interface LivePreviewColumnProps {
  * editor usado em "Meus Currículos" — rolado até a seção clicada. */
 export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
   const {
+    generating,
     result,
     resolved,
     setResolved,
@@ -41,6 +79,10 @@ export function LivePreviewColumn({ generator }: LivePreviewColumnProps) {
     const el = document.getElementById(`section-${activeEditSection}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [mode, activeEditSection]);
+
+  if (generating) {
+    return <GeneratingState />;
+  }
 
   if (!result || !resolved) {
     return (

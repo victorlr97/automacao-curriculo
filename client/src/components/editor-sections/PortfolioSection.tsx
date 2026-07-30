@@ -16,7 +16,7 @@ export function PortfolioSection({ db, onChange }: SectionProps) {
 
   return (
     <Card title="Portfólio" icon={Link2} tone="teal">
-      <Hint>Deixe em branco o que não tiver — só os links preenchidos aparecem no currículo.</Hint>
+      <Hint>Preencha os campos em branco. Caso não tiver, é só deixar em branco.</Hint>
       <FieldGrid>
         <TextField label="GitHub" value={p.github} onChange={v => update({ github: v })} icon={Code} />
         <TextField label="Behance" value={p.behance} onChange={v => update({ behance: v })} />

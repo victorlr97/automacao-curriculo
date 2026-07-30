@@ -40,7 +40,7 @@ export function GeneratePanel({ generator }: GeneratePanelProps) {
           placeholder="Deixe em branco pra gerar automático"
         />
         <Button variant="primary" onClick={handleGenerate} disabled={generating}>
-          {generating ? 'Gerando... (geralmente 30-60s)' : 'Gerar PDF'}
+          Gerar PDF
         </Button>
         <StatusMessage error={error}>{status}</StatusMessage>
       </div>

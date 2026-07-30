@@ -11,7 +11,7 @@ interface SectionProps {
 export function SkillsSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Habilidades" icon={Sparkles} tone="violet">
-      <Hint>Lista única com todas as habilidades (design e dev misturadas) — a IA escolhe as relevantes pra cada vaga.</Hint>
+      <Hint>Lista com todas as suas habilidades, a IA vai escolher as mais relevantes pra cada vaga.</Hint>
       <ChipListField label="Habilidades" items={db.skills} onChange={skills => onChange({ ...db, skills })} />
     </Card>
   );

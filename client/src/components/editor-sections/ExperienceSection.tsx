@@ -23,8 +23,7 @@ export function ExperienceSection({ db, onChange }: SectionProps) {
   return (
     <Card title="Experiências" icon={Building2} tone="teal">
       <Hint>
-        Fatos brutos de cada experiência — um por linha. A IA escolhe quais manter e reescreve a descrição final pra
-        cada vaga; nenhum currículo gerado usa esses fatos literalmente.
+        Coloque aqui suas experiências profissionais mais relevantes.
       </Hint>
       {experience.items.map((exp, idx) => (
         <CollapsibleEntry
