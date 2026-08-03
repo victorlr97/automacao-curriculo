@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as api from './api';
 import { ApiError } from './api';
+import { AdminTab } from './components/AdminTab';
 import { DatabaseEditorTab } from './components/DatabaseEditorTab';
 import { LoginScreen } from './components/LoginScreen';
 import { NotAllowedScreen } from './components/NotAllowedScreen';
@@ -26,6 +27,11 @@ function AppShell() {
         <div className={destination === 'outputs' ? 'h-full overflow-y-auto p-8' : 'hidden'}>
           <OutputsTab />
         </div>
+        {destination === 'admin' && (
+          <div className="h-full overflow-y-auto p-8">
+            <AdminTab />
+          </div>
+        )}
       </div>
     </div>
   );

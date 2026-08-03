@@ -742,6 +742,41 @@ async function generateCoverLetter(resolvedData) {
   return structured.coverLetter;
 }
 
+const FEEDBACK_INSIGHTS_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    suggestedActions: { type: 'array', items: { type: 'string' } }
+  },
+  required: ['summary', 'suggestedActions']
+};
+
+function buildFeedbackInsightsPrompt(feedbackList) {
+  const items = feedbackList
+    .map((f, i) => `${i + 1}. (${f.email || 'anônimo'}) ${f.message}`)
+    .join('\n');
+
+  return `Você vai analisar todo o feedback recebido até agora de quem está testando um app gerador de currículos (beta fechado), e resumir isso pra quem desenvolve o app decidir o que fazer a seguir.
+
+## Feedback recebido (${feedbackList.length} itens, do mais antigo pro mais recente)
+
+${items}
+
+## Como analisar
+
+1. "summary": um resumo direto dos temas e padrões que aparecem no feedback — o que as pessoas estão elogiando, o que estão reclamando, o que pedem repetidamente. Se o feedback for pouco ou vago, diga isso em vez de forçar um padrão que não existe. Não invente problemas que o feedback não menciona.
+2. "suggestedActions": uma lista de ações concretas e específicas que fariam sentido a partir desse feedback — não conselhos genéricos de produto, só o que esse feedback especificamente sustenta. Se não houver base suficiente pra sugerir nada ainda, retorne uma lista curta dizendo isso (ex: "Aguardar mais feedback antes de agir").
+
+Escreva em português, direto e sem clichês de relatório corporativo.
+
+Retorne o objeto preenchendo exatamente o schema fornecido.`;
+}
+
+async function summarizeFeedback(feedbackList) {
+  const prompt = buildFeedbackInsightsPrompt(feedbackList);
+  return runClaude(prompt, FEEDBACK_INSIGHTS_SCHEMA, 'medium');
+}
+
 module.exports = {
   generateResumeData,
   importResumeFromText,
@@ -749,6 +784,7 @@ module.exports = {
   translateResume,
   generatePresentationScript,
   generateCoverLetter,
+  summarizeFeedback,
   buildPrompt,
   RESUME_SCHEMA
 };

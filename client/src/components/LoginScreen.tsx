@@ -191,6 +191,9 @@ export function LoginScreen() {
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const scenes = usePinnedScenes(SCENES.length);
@@ -202,7 +205,7 @@ export function LoginScreen() {
       if (mode === 'login') {
         await signIn(email, password);
       } else if (mode === 'signup') {
-        await signUp(email, password);
+        await signUp(email, password, { firstName, lastName, dateOfBirth });
       } else {
         await resetPassword(email);
         setResetSent(true);
@@ -280,6 +283,13 @@ export function LoginScreen() {
               </StatusMessage>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {mode === 'signup' && (
+                  <>
+                    <TextField label="Nome" value={firstName} onChange={setFirstName} placeholder="Seu nome" required />
+                    <TextField label="Sobrenome" value={lastName} onChange={setLastName} placeholder="Seu sobrenome" required />
+                    <TextField label="Data de nascimento" type="date" value={dateOfBirth} onChange={setDateOfBirth} required />
+                  </>
+                )}
                 <TextField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="voce@email.com" />
                 {mode !== 'reset' && (
                   <TextField

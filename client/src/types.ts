@@ -139,3 +139,38 @@ export interface UpdateResumeResponse {
 export interface ApiErrorBody {
   error: string;
 }
+
+export interface AccessRequestProfile {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+}
+
+export interface AccessRequestListItem extends AccessRequestProfile {
+  uid: string;
+  email: string;
+  status: 'pending' | 'approved' | 'denied';
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+export interface FeedbackItem {
+  id: string;
+  uid: string;
+  email: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface FeedbackInsights {
+  summary: string;
+  suggestedActions: string[];
+  basedOnCount: number;
+  updatedAt: string;
+  lastError?: string;
+}
+
+export interface AdminFeedbackResponse {
+  items: FeedbackItem[];
+  insights: FeedbackInsights | null;
+}
