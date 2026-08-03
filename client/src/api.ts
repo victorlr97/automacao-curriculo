@@ -1,5 +1,8 @@
 import { auth } from './lib/firebase';
 import type {
+  AccessRequestListItem,
+  AccessRequestProfile,
+  AdminFeedbackResponse,
   ApiErrorBody,
   GenerateResumeResponse,
   ImportResumeResponse,
@@ -130,4 +133,28 @@ export function generateScript(slug: string, videoInstructions: string): Promise
 
 export function generateCoverLetter(slug: string): Promise<{ coverLetter: string }> {
   return postJson(`/api/resumes/${encodeURIComponent(slug)}/cover-letter`, {});
+}
+
+// ---------- Pedido de acesso / feedback ----------
+
+export function requestAccess(profile: AccessRequestProfile): Promise<{ ok: true }> {
+  return postJson('/api/access-requests', profile);
+}
+
+export function submitFeedback(message: string): Promise<{ ok: true }> {
+  return postJson('/api/feedback', { message });
+}
+
+// ---------- Admin (só a conta do dono do app) ----------
+
+export function getAdminFeedback(): Promise<AdminFeedbackResponse> {
+  return requestJson('/api/admin/feedback');
+}
+
+export function getAdminAccessRequests(): Promise<AccessRequestListItem[]> {
+  return requestJson('/api/admin/access-requests');
+}
+
+export function decideAccessRequest(uid: string, decision: 'approved' | 'denied'): Promise<{ ok: true }> {
+  return postJson(`/api/admin/access-requests/${encodeURIComponent(uid)}/decide`, { decision });
 }

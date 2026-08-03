@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { ChevronsLeft, ChevronsRight, FileText, FolderOpen, LogOut, User } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, FileText, FolderOpen, LogOut, MessageSquarePlus, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { FeedbackModal } from './FeedbackModal';
 
-export type Destination = 'database' | 'workspace' | 'outputs';
+export type Destination = 'database' | 'workspace' | 'outputs' | 'admin';
+
+// Só esconde o item de menu — o bloqueio de verdade é o requireOwner no
+// servidor, que confere o mesmo e-mail via uma env var (OWNER_EMAIL).
+const OWNER_EMAIL = 'victorlopesr15@gmail.com';
 
 const NAV_ITEMS: { id: Destination; label: string; icon: typeof FileText }[] = [
   { id: 'database', label: 'Meus Dados', icon: User },
   { id: 'workspace', label: 'Currículo', icon: FileText },
-  { id: 'outputs', label: 'Meus Currículos', icon: FolderOpen }
+  { id: 'outputs', label: 'Meus Currículos', icon: FolderOpen },
+  { id: 'admin', label: 'Admin', icon: ShieldCheck }
 ];
 
 const COLLAPSED_STORAGE_KEY = 'sidebarCollapsed';
@@ -20,6 +26,8 @@ interface SidebarProps {
 export function Sidebar({ active, onChange }: SidebarProps) {
   const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_STORAGE_KEY) === '1');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const navItems = NAV_ITEMS.filter(item => item.id !== 'admin' || user?.email === OWNER_EMAIL);
 
   function toggleCollapsed() {
     setCollapsed(prev => {
@@ -49,7 +57,7 @@ export function Sidebar({ active, onChange }: SidebarProps) {
       </div>
 
       <nav className={`flex flex-col gap-1.5 ${collapsed ? 'px-2' : 'px-3'}`}>
-        {NAV_ITEMS.map(item => {
+        {navItems.map(item => {
           const Icon = item.icon;
           const isActive = item.id === active;
           return (
@@ -72,6 +80,17 @@ export function Sidebar({ active, onChange }: SidebarProps) {
       <div className="mt-auto border-t border-border p-4">
         <button
           type="button"
+          onClick={() => setFeedbackOpen(true)}
+          title={collapsed ? 'Deixar feedback' : undefined}
+          className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-ink-soft transition-colors hover:bg-bg hover:text-ink ${
+            collapsed ? 'justify-center' : ''
+          }`}
+        >
+          <MessageSquarePlus size={16} />
+          {!collapsed && <span className="truncate">Deixar feedback</span>}
+        </button>
+        <button
+          type="button"
           onClick={signOut}
           title={collapsed ? `Sair (${user?.email})` : undefined}
           className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-ink-soft transition-colors hover:bg-bg hover:text-ink ${
@@ -82,6 +101,7 @@ export function Sidebar({ active, onChange }: SidebarProps) {
           {!collapsed && <span className="truncate">{user?.email}</span>}
         </button>
       </div>
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </aside>
   );
 }

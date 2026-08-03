@@ -17,7 +17,7 @@ export function NotAllowedScreen() {
         <Card>
           <p className="text-sm text-ink-soft">
             A conta <strong>{user?.email}</strong> ainda não foi liberada pra usar o app — ele está em beta fechado.
-            Entre em contato com o administrador pra pedir acesso.
+            Já avisamos automaticamente quem administra o app sobre o seu pedido de acesso.
           </p>
         </Card>
         <Button variant="secondary" onClick={signOut} className="mt-4 w-full justify-center">

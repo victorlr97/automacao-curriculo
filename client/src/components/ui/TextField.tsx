@@ -7,12 +7,13 @@ interface TextFieldProps {
   type?: string;
   placeholder?: string;
   icon?: LucideIcon;
+  required?: boolean;
 }
 
 const inputClasses =
   'w-full rounded-lg border border-border bg-white px-3.5 py-2.5 font-body text-sm text-ink placeholder:text-ink-faint transition-colors duration-150 hover:border-border-strong focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15';
 
-export function TextField({ label, value, onChange, type = 'text', placeholder, icon: Icon }: TextFieldProps) {
+export function TextField({ label, value, onChange, type = 'text', placeholder, icon: Icon, required }: TextFieldProps) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-bold tracking-wide text-ink-soft">{label}</span>
@@ -27,6 +28,7 @@ export function TextField({ label, value, onChange, type = 'text', placeholder, 
           value={value}
           placeholder={placeholder}
           onChange={e => onChange(e.target.value)}
+          required={required}
           className={`${inputClasses} ${Icon ? 'pl-10' : ''}`}
         />
       </div>

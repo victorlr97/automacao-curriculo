@@ -7,14 +7,16 @@ import {
   signOut as firebaseSignOut,
   type User
 } from 'firebase/auth';
+import * as api from '../api';
 import { auth } from '../lib/firebase';
+import type { AccessRequestProfile } from '../types';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   error: string;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, profile: AccessRequestProfile) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -61,13 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, profile: AccessRequestProfile) => {
     setError('');
     try {
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (err) {
       setError(translateAuthError(err));
       throw err;
+    }
+    // Conta já criada nesse ponto — se o aviso pro dono do app falhar (rede,
+    // e-mail fora do ar), a pessoa ainda deve chegar na tela de "aguardando
+    // liberação" normalmente, não travar num erro de cadastro.
+    try {
+      await api.requestAccess(profile);
+    } catch (err) {
+      console.error('Falha ao registrar pedido de acesso:', err);
     }
   }, []);
 

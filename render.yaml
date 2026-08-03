@@ -13,6 +13,14 @@ services:
         value: 22.14.0
       - key: FIREBASE_SERVICE_ACCOUNT_PATH
         value: /etc/secrets/firebase-service-account.json
+      - key: APP_BASE_URL
+        value: https://automacao-curriculo.onrender.com
+      - key: OWNER_EMAIL
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
       - key: VITE_FIREBASE_API_KEY
         sync: false
       - key: VITE_FIREBASE_AUTH_DOMAIN
