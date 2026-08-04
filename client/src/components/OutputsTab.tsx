@@ -6,7 +6,16 @@ import { ResumesGrid } from './ResumesGrid';
 import { StatusMessage } from './ui/StatusMessage';
 import { inputClasses } from './ui/TextField';
 
-export function OutputsTab() {
+interface OutputsTabProps {
+  active: boolean;
+}
+
+/** `active` reflete se essa é a aba visível no momento — como o AppShell
+ * mantém todas as abas montadas (só esconde via CSS pra preservar estado),
+ * sem isso a lista só carregava uma vez, no primeiro carregamento do app: um
+ * currículo gerado noutra aba só aparecia aqui depois de recarregar a
+ * página inteira. Recarregar toda vez que a aba fica ativa resolve isso. */
+export function OutputsTab({ active }: OutputsTabProps) {
   const confirm = useConfirm();
   const [items, setItems] = useState<ResumeListItem[]>([]);
   const [importFileName, setImportFileName] = useState('');
@@ -27,8 +36,8 @@ export function OutputsTab() {
   }, []);
 
   useEffect(() => {
-    loadResumes();
-  }, [loadResumes]);
+    if (active) loadResumes();
+  }, [active, loadResumes]);
 
   async function handleResumeMutated() {
     await loadResumes();

@@ -25,7 +25,7 @@ function AppShell() {
           <ResumeWorkspace />
         </div>
         <div className={destination === 'outputs' ? 'h-full overflow-y-auto p-8' : 'hidden'}>
-          <OutputsTab />
+          <OutputsTab active={destination === 'outputs'} />
         </div>
         {destination === 'admin' && (
           <div className="h-full overflow-y-auto p-8">
