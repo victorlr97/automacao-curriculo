@@ -55,6 +55,10 @@ Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.
 - [ ] Levantar pontos de fricção atuais no editor de banco de fatos e no workspace de geração
 - [ ] Priorizar e aplicar melhorias incrementais
 
+## Backlog (fora de fase, vindo de feedback de teste)
+
+- [ ] Colar link ou enviar print da vaga, em vez de só texto colado — pedido de um usuário do beta. Print é o caminho mais simples (o Claude já lê imagem direto, sem depender de raspar site nenhum); buscar o conteúdo a partir de um link exigiria fazer fetch + extração de texto no servidor, mais frágil por site. Adiado por enquanto.
+
 ## Status
 
 Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com, acesso restrito por allowlist. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.
