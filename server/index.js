@@ -678,6 +678,17 @@ app.post('/api/resumes/:slug/cover-letter', async (req, res) => {
 // novo, então não faz falta empilhar).
 let feedbackRegenerating = false;
 
+// Checagem de sanidade contra resposta degenerada da IA (ex: já vimos ela
+// devolver algo tipo summary "teste" e suggestedActions ["a", "b"] — um
+// resultado que passa na validação de schema mas não é uma análise de
+// verdade). Sem isso, um resultado assim seria salvo como se fosse válido.
+function looksLikeRealInsights(summary, suggestedActions) {
+  if (typeof summary !== 'string' || summary.trim().length < 30) return false;
+  if (!Array.isArray(suggestedActions) || suggestedActions.length === 0) return false;
+  if (suggestedActions.some(action => typeof action !== 'string' || action.trim().length < 8)) return false;
+  return true;
+}
+
 async function regenerateFeedbackInsights() {
   if (feedbackRegenerating) return;
   feedbackRegenerating = true;
@@ -686,6 +697,12 @@ async function regenerateFeedbackInsights() {
     const items = snap.docs.map(doc => doc.data());
     if (items.length === 0) return;
     const { summary, suggestedActions } = await summarizeFeedback(items);
+    if (!looksLikeRealInsights(summary, suggestedActions)) {
+      // Loga o resultado bruto pra dar pra investigar depois pelos logs do
+      // Render, já que não sobrescrevemos o plano anterior com isso.
+      console.error('Resultado da IA pra insights de feedback parece inválido:', JSON.stringify({ summary, suggestedActions }));
+      throw new Error('A IA devolveu uma resposta que não parece uma análise válida — mantendo o plano anterior.');
+    }
     await db.collection('config').doc('feedbackInsights').set({
       summary,
       suggestedActions,
@@ -693,6 +710,9 @@ async function regenerateFeedbackInsights() {
       updatedAt: new Date().toISOString()
     });
   } catch (err) {
+    // merge:true de propósito: se já existia um plano bom, ele fica — só
+    // soma o aviso de que a última tentativa falhou, em vez de apagar o que
+    // já funcionava.
     await db.collection('config').doc('feedbackInsights').set(
       { lastError: err.message, updatedAt: new Date().toISOString() },
       { merge: true }
