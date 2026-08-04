@@ -41,7 +41,7 @@ cd client && npm install && cd ..
 ```
 
 Configurar o Firebase:
-- `client/.env` com as chaves `VITE_FIREBASE_*` do seu projeto (ver `client/src/lib/firebase.ts`)
+- `client/.env` com as chaves `VITE_FIREBASE_*` do seu projeto (ver `client/src/lib/firebase.ts`) e `VITE_OWNER_EMAIL` (seu e-mail, só pra mostrar o item "Admin" no menu — o bloqueio real é no servidor)
 - `server/firebase-service-account.json` — chave da Admin SDK, baixada do console do Firebase
 
 Desenvolvimento (server + client com hot reload):

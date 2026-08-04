@@ -7,7 +7,7 @@ export type Destination = 'database' | 'workspace' | 'outputs' | 'admin';
 
 // Só esconde o item de menu — o bloqueio de verdade é o requireOwner no
 // servidor, que confere o mesmo e-mail via uma env var (OWNER_EMAIL).
-const OWNER_EMAIL = 'victorlopesr15@gmail.com';
+const OWNER_EMAIL = import.meta.env.VITE_OWNER_EMAIL ?? '';
 
 const NAV_ITEMS: { id: Destination; label: string; icon: typeof FileText }[] = [
   { id: 'database', label: 'Meus Dados', icon: User },

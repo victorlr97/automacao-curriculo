@@ -45,6 +45,15 @@ function slugify(text) {
   return slug || 'curriculo';
 }
 
+// Loga o erro completo (stack, stderr da CLI do Claude, mensagem do driver do
+// Firebase etc.) só no servidor — nunca repassa detalhe interno pro cliente,
+// pra não vazar caminho de arquivo, versão de dependência ou outro detalhe de
+// infraestrutura pra quem só está autenticado (não necessariamente confiável).
+function sendServerError(res, err, publicMessage) {
+  console.error(publicMessage, err);
+  res.status(500).json({ error: publicMessage });
+}
+
 // ---------- Autenticação: cada conta é dona de exatamente um banco de dados
 // (users/{uid} no Firestore) e dos currículos gerados por ela
 // (users/{uid}/resumes/{slug} no Firestore + PDF no Storage), isolados por
@@ -133,7 +142,7 @@ app.post('/api/access-requests', async (req, res) => {
     await sendAccessRequestEmail({ uid, email, firstName: firstName.trim(), lastName: lastName.trim(), dateOfBirth, token });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: `Não foi possível registrar o pedido de acesso: ${err.message}` });
+    sendServerError(res, err, 'Não foi possível registrar o pedido de acesso.');
   }
 });
 
@@ -165,6 +174,14 @@ function renderAdminPage(title, bodyHtml) {
 ${bodyHtml}
 </body>
 </html>`;
+}
+
+// Mesma ideia de sendServerError, só que pras rotas HTML de admin (abertas
+// direto de um link de e-mail, sem sessão do app) — loga o erro real no
+// servidor e mostra uma página genérica, sem stack nem mensagem de driver.
+function sendServerErrorPage(res, err, title, publicMessage) {
+  console.error(title, err);
+  res.status(500).send(renderAdminPage(title, `<p>${escHtml(publicMessage)}</p>`));
 }
 
 // Só mutação, sem checar token — usado pela rota autenticada do app (dono já
@@ -230,7 +247,7 @@ app.get('/admin/access-requests/:uid', async (req, res) => {
       </form>
     `));
   } catch (err) {
-    res.status(500).send(renderAdminPage('Erro', `<p>${escHtml(err.message)}</p>`));
+    sendServerErrorPage(res, err, 'Erro', 'Ocorreu um erro ao carregar esse pedido. Tente novamente mais tarde.');
   }
 });
 
@@ -257,7 +274,7 @@ async function handleEmailDecision(req, res, decision) {
       `<p>${escHtml(fullName)} ${decision === 'approved' ? 'já pode usar o app.' : 'não foi liberado(a) — nada foi feito na conta.'}</p>`
     ));
   } catch (err) {
-    res.status(500).send(renderAdminPage('Erro', `<p>${escHtml(err.message)}</p>`));
+    sendServerErrorPage(res, err, 'Erro', 'Ocorreu um erro ao processar essa decisão. Tente novamente mais tarde.');
   }
 }
 
@@ -283,7 +300,7 @@ app.get('/api/admin/access-requests', async (req, res) => {
     const snap = await db.collection('accessRequests').orderBy('createdAt', 'desc').get();
     res.json(snap.docs.map(doc => doc.data()));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível carregar os pedidos de acesso.');
   }
 });
 
@@ -301,7 +318,7 @@ app.post('/api/admin/access-requests/:uid/decide', async (req, res) => {
     }
     res.json({ ok: true, outcome: result.outcome });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível processar a decisão.');
   }
 });
 
@@ -312,7 +329,7 @@ app.get('/api/admin/feedback', async (req, res) => {
     const insightsSnap = await db.collection('config').doc('feedbackInsights').get();
     res.json({ items, insights: insightsSnap.exists ? insightsSnap.data() : null });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível carregar o feedback.');
   }
 });
 
@@ -351,7 +368,7 @@ app.get('/api/database', async (req, res) => {
     const data = await getOrCreateDatabase(req.uid, req.userEmail);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: `Não foi possível ler o banco de dados: ${err.message}` });
+    sendServerError(res, err, 'Não foi possível ler o banco de dados.');
   }
 });
 
@@ -368,7 +385,7 @@ app.put('/api/database', async (req, res) => {
     );
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: `Falha ao salvar: ${err.message}` });
+    sendServerError(res, err, 'Falha ao salvar o banco de dados.');
   }
 });
 
@@ -389,7 +406,7 @@ app.post('/api/database/import', upload.single('resume'), async (req, res) => {
     const resolved = await importDatabaseFromText(text);
     res.json(resolved);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível importar o PDF.');
   }
 });
 
@@ -461,7 +478,7 @@ app.post('/api/resumes/generate', async (req, res) => {
       pdfUrl: await getSignedPdfUrl(req.uid, slug)
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível gerar o currículo.');
   }
 });
 
@@ -484,7 +501,7 @@ app.get('/api/resumes', async (req, res) => {
     }));
     res.json(items);
   } catch (err) {
-    res.status(500).json({ error: `Não foi possível listar os currículos: ${err.message}` });
+    sendServerError(res, err, 'Não foi possível listar os currículos.');
   }
 });
 
@@ -498,7 +515,7 @@ app.get('/api/resumes/:slug/json', async (req, res) => {
     }
     res.json(doc.data());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível carregar esse currículo.');
   }
 });
 
@@ -509,7 +526,7 @@ app.delete('/api/resumes/:slug', async (req, res) => {
     await bucket.file(`resumes/${req.uid}/${slug}.pdf`).delete({ ignoreNotFound: true });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: `Não foi possível excluir: ${err.message}` });
+    sendServerError(res, err, 'Não foi possível excluir esse currículo.');
   }
 });
 
@@ -543,7 +560,7 @@ app.put('/api/resumes/:slug', async (req, res) => {
     }
     res.json({ ok: true, slug: targetSlug, pdfUrl: await getSignedPdfUrl(req.uid, targetSlug) });
   } catch (err) {
-    res.status(500).json({ error: `Falha ao salvar: ${err.message}` });
+    sendServerError(res, err, 'Falha ao salvar o currículo.');
   }
 });
 
@@ -583,7 +600,7 @@ app.post('/api/resumes/import', upload.single('resume'), async (req, res) => {
       pdfUrl: await getSignedPdfUrl(req.uid, slug)
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível importar o PDF.');
   }
 });
 
@@ -614,7 +631,7 @@ app.post('/api/resumes/:slug/translate', async (req, res) => {
       pdfUrl: await getSignedPdfUrl(req.uid, newSlug)
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível traduzir esse currículo.');
   }
 });
 
@@ -633,7 +650,7 @@ app.post('/api/resumes/:slug/script', async (req, res) => {
     const presentationScript = await generatePresentationScript(doc.data(), videoInstructions);
     res.json({ presentationScript });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível gerar o roteiro.');
   }
 });
 
@@ -651,7 +668,7 @@ app.post('/api/resumes/:slug/cover-letter', async (req, res) => {
     const coverLetter = await generateCoverLetter(doc.data());
     res.json({ coverLetter });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err, 'Não foi possível gerar a carta de apresentação.');
   }
 });
 
@@ -707,7 +724,7 @@ app.post('/api/feedback', async (req, res) => {
     regenerateFeedbackInsights().catch(err => console.error('Falha ao regenerar insights de feedback:', err.message));
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: `Não foi possível salvar o feedback: ${err.message}` });
+    sendServerError(res, err, 'Não foi possível salvar o feedback.');
   }
 });
 
