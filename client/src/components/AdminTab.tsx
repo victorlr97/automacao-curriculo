@@ -4,6 +4,7 @@ import * as api from '../api';
 import type { AccessRequestListItem, UserFeedbackGroup } from '../types';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { Modal } from './ui/Modal';
 import { StatusMessage } from './ui/StatusMessage';
 import { formatDateTime, formatRelativeTime } from '../utils';
 
@@ -18,6 +19,7 @@ export function AdminTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [decidingUid, setDecidingUid] = useState<string | null>(null);
+  const [openUid, setOpenUid] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +55,7 @@ export function AdminTab() {
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const decidedRequests = requests.filter(r => r.status !== 'pending');
+  const openGroup = userGroups.find(g => g.uid === openUid) ?? null;
 
   return (
     <div className="mx-auto flex max-w-[820px] flex-col gap-6">
@@ -107,49 +110,74 @@ export function AdminTab() {
         {userGroups.length === 0 ? (
           <p className="text-sm text-ink-soft">Nenhum feedback recebido ainda.</p>
         ) : (
-          userGroups.map(group => (
-            <div key={group.uid} className="rounded-lg border border-border p-4">
-              <p className="text-sm font-bold text-ink">{group.email}</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {userGroups.map(group => (
+              <button
+                key={group.uid}
+                type="button"
+                onClick={() => setOpenUid(group.uid)}
+                className="flex flex-col gap-2 rounded-xl border border-border bg-white p-4 text-left shadow-xs transition-shadow duration-150 hover:shadow-elevated"
+              >
+                <p className="truncate text-sm font-bold text-ink">{group.email}</p>
+                <p className="text-xs text-ink-soft">
+                  {group.items.length} feedback{group.items.length === 1 ? '' : 's'}
+                  {group.insights && ` · atualizado ${formatRelativeTime(group.insights.updatedAt)}`}
+                </p>
+                {group.insights ? (
+                  <p className="line-clamp-3 text-[13px] text-ink-soft">{group.insights.summary}</p>
+                ) : (
+                  <p className="text-[13px] text-ink-faint">Plano ainda não gerado.</p>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
 
-              {group.insights ? (
-                <div className="mt-2">
-                  {group.insights.lastError && (
-                    <p className="text-xs text-danger">Última tentativa de atualizar falhou: {group.insights.lastError}</p>
+      <Modal open={openGroup !== null} onClose={() => setOpenUid(null)} title={openGroup?.email ?? ''} size="lg">
+        {openGroup && (
+          <div className="flex flex-col gap-5">
+            <div>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-faint">Plano da IA</h4>
+              {openGroup.insights ? (
+                <>
+                  {openGroup.insights.lastError && (
+                    <p className="text-xs text-danger">Última tentativa de atualizar falhou: {openGroup.insights.lastError}</p>
                   )}
-                  <p className="text-sm text-ink">{group.insights.summary}</p>
-                  {group.insights.suggestedActions.length > 0 && (
+                  <p className="text-sm text-ink">{openGroup.insights.summary}</p>
+                  {openGroup.insights.suggestedActions.length > 0 && (
                     <ul className="list-disc pl-5 text-sm text-ink-soft">
-                      {group.insights.suggestedActions.map((action, idx) => (
+                      {openGroup.insights.suggestedActions.map((action, idx) => (
                         <li key={idx}>{action}</li>
                       ))}
                     </ul>
                   )}
                   <p className="mt-1 text-xs text-ink-faint">
-                    Baseado em {group.insights.basedOnCount} feedback{group.insights.basedOnCount === 1 ? '' : 's'} —
-                    atualizado {formatRelativeTime(group.insights.updatedAt)}.
+                    Baseado em {openGroup.insights.basedOnCount} feedback{openGroup.insights.basedOnCount === 1 ? '' : 's'} —
+                    atualizado {formatRelativeTime(openGroup.insights.updatedAt)}.
                   </p>
-                </div>
+                </>
               ) : (
-                <p className="mt-2 text-sm text-ink-soft">Plano ainda não gerado.</p>
+                <p className="text-sm text-ink-soft">Plano ainda não gerado.</p>
               )}
-
-              <details className="mt-3">
-                <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
-                  Feedback bruto ({group.items.length})
-                </summary>
-                <div className="mt-2 flex flex-col gap-2">
-                  {group.items.map(item => (
-                    <div key={item.id} className="rounded-lg bg-bg p-2.5">
-                      <p className="text-sm text-ink">{item.message}</p>
-                      <p className="mt-1 text-xs text-ink-faint">{formatRelativeTime(item.createdAt)}</p>
-                    </div>
-                  ))}
-                </div>
-              </details>
             </div>
-          ))
+
+            <div>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-faint">
+                Feedback bruto ({openGroup.items.length})
+              </h4>
+              <div className="flex flex-col gap-2">
+                {openGroup.items.map(item => (
+                  <div key={item.id} className="rounded-lg bg-bg p-2.5">
+                    <p className="text-sm text-ink">{item.message}</p>
+                    <p className="mt-1 text-xs text-ink-faint">{formatRelativeTime(item.createdAt)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-      </Card>
+      </Modal>
     </div>
   );
 }
