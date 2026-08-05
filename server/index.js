@@ -325,9 +325,19 @@ app.post('/api/admin/access-requests/:uid/decide', async (req, res) => {
 app.get('/api/admin/feedback', async (req, res) => {
   try {
     const snap = await db.collection('feedback').orderBy('createdAt', 'desc').get();
-    const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const insightsSnap = await db.collection('config').doc('feedbackInsights').get();
-    res.json({ items, insights: insightsSnap.exists ? insightsSnap.data() : null });
+    const byUser = new Map();
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      if (!byUser.has(data.uid)) byUser.set(data.uid, { uid: data.uid, email: data.email, items: [] });
+      byUser.get(data.uid).items.push({ id: doc.id, ...data });
+    }
+    const users = await Promise.all(
+      [...byUser.values()].map(async user => {
+        const insightsSnap = await db.collection('feedbackInsights').doc(user.uid).get();
+        return { ...user, insights: insightsSnap.exists ? insightsSnap.data() : null };
+      })
+    );
+    res.json({ users });
   } catch (err) {
     sendServerError(res, err, 'Não foi possível carregar o feedback.');
   }
@@ -676,7 +686,10 @@ app.post('/api/resumes/:slug/cover-letter', async (req, res) => {
 // envios chegarem próximos — a próxima chamada só roda depois que essa
 // terminar (não enfileira, só ignora: o próximo feedback novo já dispara de
 // novo, então não faz falta empilhar).
-let feedbackRegenerating = false;
+// Guard por uid, não global — o plano de cada pessoa é independente, então
+// a regeneração de uma não deve esperar/pular por causa da regeneração de
+// outra rodando ao mesmo tempo.
+const feedbackRegeneratingUids = new Set();
 
 // Checagem de sanidade contra resposta degenerada da IA (ex: já vimos ela
 // devolver algo tipo summary "teste" e suggestedActions ["a", "b"] — um
@@ -689,36 +702,39 @@ function looksLikeRealInsights(summary, suggestedActions) {
   return true;
 }
 
-async function regenerateFeedbackInsights() {
-  if (feedbackRegenerating) return;
-  feedbackRegenerating = true;
+// Cada usuário tem o próprio plano (feedbackInsights/{uid}), baseado só no
+// feedback dessa pessoa — não mistura com o de ninguém mais.
+async function regenerateFeedbackInsightsForUser(uid) {
+  if (feedbackRegeneratingUids.has(uid)) return;
+  feedbackRegeneratingUids.add(uid);
+  const ref = db.collection('feedbackInsights').doc(uid);
   try {
-    const snap = await db.collection('feedback').orderBy('createdAt', 'asc').get();
-    const items = snap.docs.map(doc => doc.data());
+    // Sem orderBy aqui de propósito — combinar where(uid) com orderBy(createdAt)
+    // pediria um índice composto no Firestore. Ordena em memória em vez disso;
+    // o volume de feedback por pessoa é sempre pequeno.
+    const snap = await db.collection('feedback').where('uid', '==', uid).get();
+    const items = snap.docs.map(doc => doc.data()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     if (items.length === 0) return;
     const { summary, suggestedActions } = await summarizeFeedback(items);
     if (!looksLikeRealInsights(summary, suggestedActions)) {
       // Loga o resultado bruto pra dar pra investigar depois pelos logs do
       // Render, já que não sobrescrevemos o plano anterior com isso.
-      console.error('Resultado da IA pra insights de feedback parece inválido:', JSON.stringify({ summary, suggestedActions }));
+      console.error('Resultado da IA pra insights de feedback parece inválido:', JSON.stringify({ uid, summary, suggestedActions }));
       throw new Error('A IA devolveu uma resposta que não parece uma análise válida — mantendo o plano anterior.');
     }
-    await db.collection('config').doc('feedbackInsights').set({
+    await ref.set({
+      email: items[items.length - 1].email || '',
       summary,
       suggestedActions,
       basedOnCount: items.length,
       updatedAt: new Date().toISOString()
     });
   } catch (err) {
-    // merge:true de propósito: se já existia um plano bom, ele fica — só
-    // soma o aviso de que a última tentativa falhou, em vez de apagar o que
-    // já funcionava.
-    await db.collection('config').doc('feedbackInsights').set(
-      { lastError: err.message, updatedAt: new Date().toISOString() },
-      { merge: true }
-    ).catch(() => {});
+    // merge:true de propósito: se já existia um plano bom pra essa pessoa,
+    // ele fica — só soma o aviso de que a última tentativa falhou.
+    await ref.set({ lastError: err.message, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
   } finally {
-    feedbackRegenerating = false;
+    feedbackRegeneratingUids.delete(uid);
   }
 }
 
@@ -741,7 +757,7 @@ app.post('/api/feedback', async (req, res) => {
     });
     // Não espera a IA terminar de regenerar o plano — quem mandou o feedback
     // não deve ficar preso esperando isso pra ver "Obrigado!" na tela.
-    regenerateFeedbackInsights().catch(err => console.error('Falha ao regenerar insights de feedback:', err.message));
+    regenerateFeedbackInsightsForUser(req.uid).catch(err => console.error('Falha ao regenerar insights de feedback:', err.message));
     res.json({ ok: true });
   } catch (err) {
     sendServerError(res, err, 'Não foi possível salvar o feedback.');

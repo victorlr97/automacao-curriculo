@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, ClipboardList, MessageSquare, XCircle } from 'lucide-react';
 import * as api from '../api';
-import type { AccessRequestListItem, FeedbackItem, FeedbackInsights } from '../types';
+import type { AccessRequestListItem, UserFeedbackGroup } from '../types';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { StatusMessage } from './ui/StatusMessage';
 import { formatDateTime, formatRelativeTime } from '../utils';
 
 /** Aba visível só pra conta do dono do app (o bloqueio de verdade é o
- * requireOwner no servidor — aqui é só onde os dados aparecem). Mostra o
- * plano/resumo que a IA mantém automaticamente a partir do feedback
- * recebido, os pedidos de acesso pendentes (aprovar/recusar direto aqui, sem
- * precisar do e-mail), e o feedback bruto. */
+ * requireOwner no servidor — aqui é só onde os dados aparecem). Mostra os
+ * pedidos de acesso pendentes (aprovar/recusar direto aqui, sem precisar do
+ * e-mail) e o feedback recebido — cada pessoa com o próprio plano gerado
+ * pela IA, separado do de qualquer outra (não é um resumo agregado). */
 export function AdminTab() {
-  const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [insights, setInsights] = useState<FeedbackInsights | null>(null);
+  const [userGroups, setUserGroups] = useState<UserFeedbackGroup[]>([]);
   const [requests, setRequests] = useState<AccessRequestListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,8 +22,7 @@ export function AdminTab() {
   const load = useCallback(async () => {
     try {
       const [feedback, accessRequests] = await Promise.all([api.getAdminFeedback(), api.getAdminAccessRequests()]);
-      setItems(feedback.items);
-      setInsights(feedback.insights);
+      setUserGroups(feedback.users);
       setRequests(accessRequests);
     } catch (err) {
       setError((err as Error).message);
@@ -59,30 +57,6 @@ export function AdminTab() {
   return (
     <div className="mx-auto flex max-w-[820px] flex-col gap-6">
       <StatusMessage error>{error}</StatusMessage>
-
-      <Card title="Plano da IA" icon={ClipboardList} tone="violet">
-        {!insights ? (
-          <p className="text-sm text-ink-soft">Nenhum feedback recebido ainda — o plano aparece aqui assim que o primeiro chegar.</p>
-        ) : (
-          <>
-            {insights.lastError && (
-              <p className="text-xs text-danger">Última tentativa de atualizar falhou: {insights.lastError}</p>
-            )}
-            <p className="text-sm text-ink">{insights.summary}</p>
-            {insights.suggestedActions.length > 0 && (
-              <ul className="list-disc pl-5 text-sm text-ink-soft">
-                {insights.suggestedActions.map((action, idx) => (
-                  <li key={idx}>{action}</li>
-                ))}
-              </ul>
-            )}
-            <p className="text-xs text-ink-faint">
-              Baseado em {insights.basedOnCount} feedback{insights.basedOnCount === 1 ? '' : 's'} — atualizado{' '}
-              {formatRelativeTime(insights.updatedAt)}.
-            </p>
-          </>
-        )}
-      </Card>
 
       <Card title={`Pedidos de acesso pendentes (${pendingRequests.length})`} icon={ClipboardList} tone="teal">
         {pendingRequests.length === 0 ? (
@@ -129,16 +103,49 @@ export function AdminTab() {
         )}
       </Card>
 
-      <Card title={`Feedback recebido (${items.length})`} icon={MessageSquare} tone="accent">
-        {items.length === 0 ? (
+      <Card title={`Feedback por usuário (${userGroups.length})`} icon={MessageSquare} tone="accent">
+        {userGroups.length === 0 ? (
           <p className="text-sm text-ink-soft">Nenhum feedback recebido ainda.</p>
         ) : (
-          items.map(item => (
-            <div key={item.id} className="rounded-lg border border-border p-3">
-              <p className="text-sm text-ink">{item.message}</p>
-              <p className="mt-1 text-xs text-ink-faint">
-                {item.email} · {formatRelativeTime(item.createdAt)}
-              </p>
+          userGroups.map(group => (
+            <div key={group.uid} className="rounded-lg border border-border p-4">
+              <p className="text-sm font-bold text-ink">{group.email}</p>
+
+              {group.insights ? (
+                <div className="mt-2">
+                  {group.insights.lastError && (
+                    <p className="text-xs text-danger">Última tentativa de atualizar falhou: {group.insights.lastError}</p>
+                  )}
+                  <p className="text-sm text-ink">{group.insights.summary}</p>
+                  {group.insights.suggestedActions.length > 0 && (
+                    <ul className="list-disc pl-5 text-sm text-ink-soft">
+                      {group.insights.suggestedActions.map((action, idx) => (
+                        <li key={idx}>{action}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-1 text-xs text-ink-faint">
+                    Baseado em {group.insights.basedOnCount} feedback{group.insights.basedOnCount === 1 ? '' : 's'} —
+                    atualizado {formatRelativeTime(group.insights.updatedAt)}.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-ink-soft">Plano ainda não gerado.</p>
+              )}
+
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
+                  Feedback bruto ({group.items.length})
+                </summary>
+                <div className="mt-2 flex flex-col gap-2">
+                  {group.items.map(item => (
+                    <div key={item.id} className="rounded-lg bg-bg p-2.5">
+                      <p className="text-sm text-ink">{item.message}</p>
+                      <p className="mt-1 text-xs text-ink-faint">{formatRelativeTime(item.createdAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </div>
           ))
         )}

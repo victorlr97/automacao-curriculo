@@ -752,20 +752,21 @@ const FEEDBACK_INSIGHTS_SCHEMA = {
 };
 
 function buildFeedbackInsightsPrompt(feedbackList) {
+  const email = feedbackList[0]?.email || 'anônimo';
   const items = feedbackList
-    .map((f, i) => `${i + 1}. (${f.email || 'anônimo'}) ${f.message}`)
+    .map((f, i) => `${i + 1}. ${f.message}`)
     .join('\n');
 
-  return `Você vai analisar todo o feedback recebido até agora de quem está testando um app gerador de currículos (beta fechado), e resumir isso pra quem desenvolve o app decidir o que fazer a seguir.
+  return `Você vai analisar todo o feedback recebido até agora de UMA pessoa específica testando um app gerador de currículos (beta fechado), e resumir isso pra quem desenvolve o app decidir o que fazer a partir do que ELA especificamente reportou. Isso não é uma análise agregada de vários testadores — é o histórico de uma pessoa só (${email}), tratado separado do de qualquer outra.
 
-## Feedback recebido (${feedbackList.length} itens, do mais antigo pro mais recente)
+## Feedback recebido dessa pessoa (${feedbackList.length} itens, do mais antigo pro mais recente)
 
 ${items}
 
 ## Como analisar
 
-1. "summary": um resumo direto dos temas e padrões que aparecem no feedback — o que as pessoas estão elogiando, o que estão reclamando, o que pedem repetidamente. Se o feedback for pouco ou vago, diga isso em vez de forçar um padrão que não existe. Não invente problemas que o feedback não menciona.
-2. "suggestedActions": uma lista de ações concretas e específicas que fariam sentido a partir desse feedback — não conselhos genéricos de produto, só o que esse feedback especificamente sustenta. Se não houver base suficiente pra sugerir nada ainda, retorne uma lista curta dizendo isso (ex: "Aguardar mais feedback antes de agir").
+1. "summary": um resumo direto do que essa pessoa reportou — o que ela elogiou, o que reclamou, o que pediu. Se for pouco ou vago, diga isso em vez de forçar um padrão que não existe. Não invente problemas que ela não mencionou, e não misture com feedback de outras pessoas (você só tem acesso ao dela mesmo).
+2. "suggestedActions": ações concretas e específicas que fariam sentido a partir do que ELA reportou — não conselhos genéricos de produto, só o que esse feedback específico sustenta. Se não houver base suficiente pra sugerir nada ainda, retorne uma lista curta dizendo isso (ex: "Aguardar mais feedback dessa pessoa antes de agir").
 
 Escreva em português, direto e sem clichês de relatório corporativo.
 

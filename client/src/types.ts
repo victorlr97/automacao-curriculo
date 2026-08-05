@@ -170,7 +170,13 @@ export interface FeedbackInsights {
   lastError?: string;
 }
 
-export interface AdminFeedbackResponse {
+export interface UserFeedbackGroup {
+  uid: string;
+  email: string;
   items: FeedbackItem[];
   insights: FeedbackInsights | null;
+}
+
+export interface AdminFeedbackResponse {
+  users: UserFeedbackGroup[];
 }
