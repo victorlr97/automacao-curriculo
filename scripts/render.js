@@ -229,8 +229,7 @@ function renderHtml(data, options = {}) {
         <h2 class="section">${labels.objective}</h2>
         <div class="objective-text">${esc(data.objective)}</div>
 
-        <h2 class="section">${labels.experience}</h2>
-        ${experienceHtml}
+        ${experienceHtml ? `<h2 class="section">${labels.experience}</h2>${experienceHtml}` : ''}
 
         ${projectsHtml ? `<h2 class="section">${labels.projects}</h2>${projectsHtml}` : ''}
 
@@ -242,11 +241,9 @@ function renderHtml(data, options = {}) {
         <div class="portfolio-links">${portfolioLinks.join('')}</div>` : ''}
       </div>
       <div class="col-right">
-        <h2 class="section">${labels.skills}</h2>
-        ${skillsHtml}
+        ${skillsHtml ? `<h2 class="section">${labels.skills}</h2>${skillsHtml}` : ''}
 
-        <h2 class="section">${labels.languages}</h2>
-        ${languagesHtml}
+        ${languagesHtml ? `<h2 class="section">${labels.languages}</h2>${languagesHtml}` : ''}
 
         ${additionalEducationHtml ? `<h2 class="section">${labels.additionalEducation}</h2>${additionalEducationHtml}` : ''}
       </div>

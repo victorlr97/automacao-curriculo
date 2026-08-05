@@ -97,53 +97,59 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
             </p>
           </Section>
 
-          <Section label={labels.experience} onClick={() => onSectionClick('experience')}>
-            {data.experience.map((exp, idx) => (
-              <Entry
-                key={idx}
-                title={
-                  <>
-                    <span className="font-bold">
-                      {exp.company}
-                      {exp.location ? `, ${exp.location}` : ''}
-                    </span>{' '}
-                    — <span>{exp.role}</span>
-                  </>
-                }
-                period={exp.period}
-                description={exp.description}
-              />
-            ))}
-          </Section>
+          {data.experience.length > 0 && (
+            <Section label={labels.experience} onClick={() => onSectionClick('experience')}>
+              {data.experience.map((exp, idx) => (
+                <Entry
+                  key={idx}
+                  title={
+                    <>
+                      <span className="font-bold">
+                        {exp.company}
+                        {exp.location ? `, ${exp.location}` : ''}
+                      </span>{' '}
+                      — <span>{exp.role}</span>
+                    </>
+                  }
+                  period={exp.period}
+                  description={exp.description}
+                />
+              ))}
+            </Section>
+          )}
 
-          <Section label={labels.projects} onClick={() => onSectionClick('projects')}>
-            {data.projects.map((proj, idx) => (
-              <Entry
-                key={idx}
-                title={
-                  <>
-                    <span className="font-bold">{proj.name}</span> — <span>{proj.role}</span>
-                  </>
-                }
-                stack={proj.stack?.join(', ')}
-                description={proj.description}
-              />
-            ))}
-          </Section>
+          {data.projects.length > 0 && (
+            <Section label={labels.projects} onClick={() => onSectionClick('projects')}>
+              {data.projects.map((proj, idx) => (
+                <Entry
+                  key={idx}
+                  title={
+                    <>
+                      <span className="font-bold">{proj.name}</span> — <span>{proj.role}</span>
+                    </>
+                  }
+                  stack={proj.stack?.join(', ')}
+                  description={proj.description}
+                />
+              ))}
+            </Section>
+          )}
 
-          <Section label={labels.education} onClick={() => onSectionClick('education')}>
-            {data.education.map((edu, idx) => (
-              <Entry
-                key={idx}
-                title={
-                  <>
-                    <span className="font-bold">{edu.institution}</span> — <span>{edu.degree}</span>
-                  </>
-                }
-                period={edu.period}
-              />
-            ))}
-          </Section>
+          {data.education.length > 0 && (
+            <Section label={labels.education} onClick={() => onSectionClick('education')}>
+              {data.education.map((edu, idx) => (
+                <Entry
+                  key={idx}
+                  title={
+                    <>
+                      <span className="font-bold">{edu.institution}</span> — <span>{edu.degree}</span>
+                    </>
+                  }
+                  period={edu.period}
+                />
+              ))}
+            </Section>
+          )}
 
           {portfolioLinks.length > 0 && (
             <Section label={labels.portfolio}>
@@ -164,24 +170,36 @@ export function ResumePreviewDocument({ data, onSectionClick }: ResumePreviewDoc
         </div>
 
         <div>
-          <Section label={labels.skills} onClick={() => onSectionClick('skills')} first>
-            {data.skills.map((skill, idx) => (
-              <div key={idx} className="mb-[9px] text-[13px]" style={{ color: '#333' }}>
-                {skill}
-              </div>
-            ))}
-          </Section>
+          {data.skills.length > 0 && (
+            <Section label={labels.skills} onClick={() => onSectionClick('skills')} first>
+              {data.skills.map((skill, idx) => (
+                <div key={idx} className="mb-[9px] text-[13px]" style={{ color: '#333' }}>
+                  {skill}
+                </div>
+              ))}
+            </Section>
+          )}
 
-          <Section label={labels.languages} onClick={() => onSectionClick('languages')}>
-            {data.languages.map((lang, idx) => (
-              <div key={idx} className="mb-[9px] text-[13px]" style={{ color: '#333' }}>
-                {lang.name} ({lang.level})
-              </div>
-            ))}
-          </Section>
+          {data.languages.length > 0 && (
+            <Section
+              label={labels.languages}
+              onClick={() => onSectionClick('languages')}
+              first={data.skills.length === 0}
+            >
+              {data.languages.map((lang, idx) => (
+                <div key={idx} className="mb-[9px] text-[13px]" style={{ color: '#333' }}>
+                  {lang.name} ({lang.level})
+                </div>
+              ))}
+            </Section>
+          )}
 
           {data.additionalEducation.length > 0 && (
-            <Section label={labels.additionalEducation} onClick={() => onSectionClick('additionalEducation')}>
+            <Section
+              label={labels.additionalEducation}
+              onClick={() => onSectionClick('additionalEducation')}
+              first={data.skills.length === 0 && data.languages.length === 0}
+            >
               {data.additionalEducation.map((ed, idx) => (
                 <div
                   key={idx}
