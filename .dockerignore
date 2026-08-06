@@ -1,0 +1,12 @@
+node_modules
+client/node_modules
+data
+output
+public
+.chrome-cache
+.git
+.github
+server/firebase-service-account.json
+.env
+.env.*
+*.local

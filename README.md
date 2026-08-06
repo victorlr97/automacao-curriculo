@@ -24,7 +24,7 @@ O motor de IA é a CLI do Claude Code (`claude -p ...`), não a API paga por tok
 - Backend: Node.js + Express, `puppeteer-core` (renderização do PDF), motor de IA via CLI do Claude Code
 - Frontend: React 19 + TypeScript + Vite + Tailwind CSS v4
 - Dados: Firebase Auth (login), Firestore (banco de fatos e metadados dos currículos), Firebase Storage (PDFs gerados)
-- Deploy: Render (`render.yaml`)
+- Deploy: Cloud Run (`Dockerfile`), URL principal `https://automacao-curriculo-6tii7mjymq-uc.a.run.app` — o Cloud Run já serve o client estático e a API no mesmo domínio, sem precisar de proxy. Firebase Hosting (`firebase.json`) só existe pra redirecionar a URL antiga (`automacao-curriculo-app.web.app`) pra essa — usá-lo como proxy (`rewrites`) chegou a ser tentado, mas o Hosting tem um timeout próprio (~60s) que cortava requisições lentas (geração de currículo) antes do Cloud Run terminar, mesmo com o `--timeout` do Cloud Run configurado bem mais alto.
 
 ## Pré-requisitos
 
@@ -68,7 +68,7 @@ App em `http://localhost:5175`.
 - `scripts/` — renderização de PDF (`build-resume.js`, `render.js`) e scripts de migração de dados
 - `template/fonts/` — fontes embutidas no PDF
 - `firestore.rules`, `storage.rules` — regras de segurança do Firebase
-- `render.yaml` — configuração de deploy no Render
+- `Dockerfile`, `server/cloudrun-start.sh` — imagem e entrypoint do deploy no Cloud Run
 - `.claude/commands/gerar-curriculo.md` — fluxo alternativo via Claude Code (`/gerar-curriculo`)
 
 ## Dados

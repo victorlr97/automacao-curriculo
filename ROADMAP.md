@@ -1,6 +1,6 @@
 # Roadmap
 
-Última atualização: 2026-07-28
+Última atualização: 2026-08-06
 
 ## Contexto e restrições
 
@@ -41,6 +41,20 @@
 
 Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.md](JORNADA.md).
 
+### Fase 2.1 — Migração Render → Cloud Run — concluída em 2026-08-06
+- [x] Motivo: Render free tier hiberna após 30min de inatividade, cold start lento na volta
+- [x] `Dockerfile` — mesma receita do Render (Chrome via apt + CLI do Claude), rodando como usuário não-root
+- [x] `server/firebase-admin.js` — Application Default Credentials no lugar da chave de service account (+ role de IAM `roles/iam.serviceAccountTokenCreator`, necessária pra assinar URLs do Storage sem chave de arquivo)
+- [x] Secrets (sessão da CLI do Claude, senha de app do Gmail) movidos pro Secret Manager, montados no Cloud Run
+- [x] `min-instances=0` + `--cpu-boost` — mesmo custo do free tier do Render, cold start de segundos em vez de ~50s+
+- [x] Testado ponta a ponta em produção (mesmo padrão de conta descartável da Fase 2)
+- [x] Firebase Hosting como proxy (`rewrites` pro Cloud Run) descartado — tem um timeout próprio (~60s) que cortava a geração de currículo antes do Cloud Run terminar (que respondia certo, só que depois do Hosting já ter desistido e mostrado erro pro usuário). Nova URL principal do app: https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run já serve client + API no mesmo domínio). Hosting mantido só como redirect 301 da URL antiga (`automacao-curriculo-app.web.app`) pra essa.
+- [x] Confirmado pelo usuário, na conta real: geração de currículo completa sem 502 na URL nova
+- [x] `render.yaml` e `server/render-start.sh` removidos
+- [x] Serviço desligado no painel do Render
+
+Detalhes técnicos (bugs encontrados e corrigidos: montagem de secret via `cp`, permissão de IAM pra signed URL, bug do `echo -n` no PowerShell corrompendo um secret) registrados no [JORNADA.md](JORNADA.md).
+
 ### Fase 3 — Fluxo de IA no n8n
 - [ ] Desenhar o fluxo (leitura dos fatos → geração dos campos → validação → render do PDF)
 - [ ] Prototipar mantendo custo zero
@@ -61,4 +75,4 @@ Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.
 
 ## Status
 
-Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com, acesso restrito por allowlist. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.
+Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run, migrado do Render; `automacao-curriculo-app.web.app` redireciona pra essa), acesso restrito por allowlist. Render desligado. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.

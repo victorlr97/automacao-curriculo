@@ -64,6 +64,28 @@ Resultado: o primeiro deploy subiu sem erros — os pontos mais arriscados (cami
 
 Pendência conhecida, não resolvida ainda: o cadastro na URL pública está aberto pra qualquer e-mail. A intenção original de manter isso fechado (a CLI roda sob a assinatura pessoal, uso público descontrolado pode estourar limite) continua de pé — falta implementar a restrição antes de divulgar o link amplamente.
 
+## Fase 2.1 — Migração Render → Cloud Run
+
+Motivo: o Render free tier hiberna depois de 30min sem tráfego, e a primeira requisição depois disso demora bastante pra "acordar" o dyno — ruim pra um link que se pretende mostrar como parte de um portfólio. Com o plano Blaze já ativo no projeto Firebase, fazia sentido mover o backend pra dentro do próprio Firebase/Google Cloud.
+
+Decisão de arquitetura: Cloud Functions foi descartado — o modelo de buildpacks (usado por Functions e por deploys "from source" sem Dockerfile no Cloud Run) não dá controle sobre instalar pacotes de sistema via `apt-get`, e o Chrome do Puppeteer depende de várias libs do SO que a imagem padrão de Node pode ou não ter. Cloud Run com `Dockerfile` próprio replica exatamente o que já funcionava no Render (mesmo `apt-get install` das libs do Chrome, mesmo `npm install -g @anthropic-ai/claude-code`), só trocando o mecanismo de injeção de segredo (Secret Manager no lugar de Secret Files do Render) e adicionando controle de `min-instances`.
+
+Antes de qualquer deploy, o `Dockerfile` foi validado localmente (`docker build` + `docker run`) — Docker Desktop não estava rodando na máquina, foi iniciado sob demanda. O build local expôs que as libs do Chrome resolvem sem problema no Debian bookworm (base do `node:22-slim`), e o container rodando localmente respondeu certo (`/` 200, `/api/database` 401 sem token) antes de gastar um deploy real na nuvem.
+
+Mudança de código: `server/firebase-admin.js` passou a cair em Application Default Credentials quando não encontra o arquivo `firebase-service-account.json` (que não existe no Cloud Run) — a service account do próprio serviço, com as roles de IAM certas, resolve a credencial sozinha, eliminando mais um secret.
+
+Três bugs apareceram só em produção, nenhum previsto pelo teste local:
+1. `cp` recusava copiar a credencial da CLI do Claude do secret montado (`cp: skipping file ... as it was replaced while being copied`) — o Cloud Run monta secrets como um symlink trocado atomicamente por baixo, e o `cp` do coreutils detecta a troca em pleno voo e aborta. Trocado por `cat arquivo > destino` em `server/cloudrun-start.sh`, que não tem essa checagem.
+2. Geração de currículo terminava em 500 no último passo (URL assinada do PDF): `Permission 'iam.serviceAccounts.signBlob' denied`. Com chave de service account em arquivo, a assinatura da URL acontece localmente; com Application Default Credentials (sem chave), a lib precisa chamar a API IAM `signBlob` pra assinar em nome da própria conta de serviço — exige a role `roles/iam.serviceAccountTokenCreator` atribuída a ela mesma, que não vem por padrão.
+3. O secret da senha de app do Gmail ficou corrompido: o comando `echo -n "senha" | gcloud secrets versions add ...` é sintaxe de bash, mas foi rodado no PowerShell, onde `echo` (alias de `Write-Output`) não reconhece `-n` como flag — ele vira mais um argumento de texto, e o secret acabou salvo como duas linhas (`-n` numa, a senha na outra). O SMTP do Gmail rejeitava com `535 Username and Password not accepted`. Corrigido escrevendo a senha num arquivo temporário via `[System.IO.File]::WriteAllText` (sem quebra de linha) em vez de depender de `echo`.
+
+Dois bugs a mais apareceram depois, só visíveis testando no navegador de verdade (os testes via API REST não passam pelo bundle do client, então não pegaram isso):
+4. O menu "Admin" não aparecia mesmo logado com a conta certa. Causa raiz dupla: (a) `--set-build-env-vars` do `gcloud run deploy` não tem efeito nenhum quando o build usa um `Dockerfile` (só vale pro modo buildpacks, sem Dockerfile) — confirmado inspecionando o passo `docker build` no log do Cloud Build, sem nenhum `--build-arg`; então nenhuma chave `VITE_*` nunca chegou no `ARG` do Dockerfile. (b) Isso ficou mascarado porque `firebase deploy --only hosting` publicou o conteúdo da pasta `public/` local (um build antigo de outra sessão) como arquivo estático — Hosting sempre prioriza um arquivo estático que bate com o caminho sobre a regra de rewrite pro Cloud Run, então o navegador carregava esse bundle velho em vez do que o Cloud Run de fato serve. Corrigido fixando as chaves `VITE_*` como `ENV` direto no `Dockerfile` (não são segredo — mesmas chaves já públicas em qualquer bundle JS de app Firebase) e apontando `firebase.json`/`public` pra uma pasta sempre vazia (`hosting-empty/`), pra nunca mais competir com o rewrite.
+
+Validação: mesmo método da Fase 2 (conta de teste descartável via API REST do Firebase Auth, sem abrir navegador) — banco de fatos, geração de currículo (CLI do Claude + Chrome + Storage), PDF baixado e conferido pelos magic bytes (`%PDF-1.4`), feedback, e o fluxo de e-mail de pedido de acesso, depois confirmado sem erro nos logs do Cloud Run após a correção do secret do Gmail. Conta, dados no Firestore/Storage e allowlist removidos depois.
+
+Um quinto bug só apareceu testando com a conta real (a de teste tinha poucos fatos, então a chamada pra IA terminava rápido): a geração de currículo voltava 502 no navegador mesmo o log do Cloud Run mostrando `HTTP 200` — o servidor tinha terminado com sucesso (currículo salvo de verdade no Firestore/Storage), só que depois de ~90s, e o **Firebase Hosting** (usado até então como proxy — `rewrites` no `firebase.json` — na frente do Cloud Run) tem um timeout próprio de proxy, bem mais curto que o `--timeout` configurado no Cloud Run (420s) e não configurável por fora. Decisão: tirar o Hosting do caminho inteiramente, em vez de tentar contornar caso a caso — `firebase.json` passou a só ter um `redirect` 301 da URL antiga (`automacao-curriculo-app.web.app`) pra URL do próprio Cloud Run (`automacao-curriculo-6tii7mjymq-uc.a.run.app`), que já serve o client estático e a API no mesmo domínio, sem proxy nenhum no meio. `APP_BASE_URL` atualizado pra essa URL nova (usada nos links do e-mail de pedido de acesso).
+
 ## Problemas e soluções (resumo)
 
 | Problema | Solução |
@@ -78,7 +100,14 @@ Pendência conhecida, não resolvida ainda: o cadastro na URL pública está abe
 | Disco do Render não sobrevive a redeploy — quebra a galeria de currículos | Currículos gerados migrados pra Firestore (metadados) + Storage (PDF) |
 | Informação errada sobre o Storage ser gratuito no Spark | Verificado por busca, corrigido com o usuário, upgrade consciente pro Blaze |
 | Link `<a href>` de PDF não manda header de autenticação | PDF servido via signed URL do Storage, não mais rota autenticada própria |
+| Render hiberna após 30min sem tráfego, cold start lento | Migrado pra Cloud Run (`Dockerfile` próprio), `min-instances=0` + `--cpu-boost` |
+| `cp` falhava copiando secret montado pelo Cloud Run (symlink trocado atomicamente) | Trocado por `cat arquivo > destino` em `server/cloudrun-start.sh` |
+| `Permission iam.serviceAccounts.signBlob denied` ao gerar URL assinada com Application Default Credentials | Role `roles/iam.serviceAccountTokenCreator` atribuída à própria service account do Cloud Run |
+| Secret da senha de app do Gmail corrompido (`echo -n` é sintaxe de bash, não de PowerShell) | Secret reescrito via `[System.IO.File]::WriteAllText` num arquivo temporário, sem depender de `echo` |
+| `--set-build-env-vars` do `gcloud run deploy` não passa `--build-arg` pro `docker build` quando há `Dockerfile` (só vale pra buildpacks) | Chaves `VITE_*` fixadas como `ENV` direto no `Dockerfile` — não são segredo |
+| `firebase deploy --only hosting` publicava um build antigo da pasta `public/` local, que a Hosting servia por cima do rewrite pro Cloud Run | `firebase.json` aponta `public` pra uma pasta sempre vazia (`hosting-empty/`) |
+| Firebase Hosting como proxy (`rewrites`) tem timeout próprio, curto demais pra geração de currículo (~90s) | Hosting virou só um `redirect` 301 pra URL do Cloud Run — sem proxy no meio |
 
 ## Status atual
 
-Fases 1 e 2 concluídas — app em produção em https://automacao-curriculo.onrender.com, testado ponta a ponta. Pendência: restringir o cadastro antes de divulgar o link.
+Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run; `automacao-curriculo-app.web.app` redireciona pra essa), geração de currículo confirmada sem 502 na conta real. Render desligado — migração concluída de ponta a ponta.

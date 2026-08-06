@@ -11,6 +11,9 @@ public/
 # Chrome baixado pelo Puppeteer em produção (scripts/ensure-chrome.js).
 .chrome-cache/
 
+# Cache local do Firebase CLI (firebase deploy).
+.firebase/
+
 # Segredos e configuração de ambiente (chaves do Firebase, API keys, etc.).
 .env
 .env.*

@@ -1,4 +1,14 @@
 {
+  "hosting": {
+    "public": "hosting-empty",
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "https://automacao-curriculo-6tii7mjymq-uc.a.run.app",
+        "type": 301
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
