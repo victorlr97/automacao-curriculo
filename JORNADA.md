@@ -125,6 +125,7 @@ Um erro no deploy: `gcloud run deploy --set-secrets` substitui todos os secrets 
 | Firebase Hosting como proxy (`rewrites`) tem timeout próprio, curto demais pra geração de currículo (~90s) | Hosting virou só um `redirect` 301 pra URL do Cloud Run — sem proxy no meio |
 | `gcloud run deploy --set-secrets` substitui todos os secrets do serviço (a senha do Gmail saiu da revisão) | Restaurada com `--update-secrets`, que só acrescenta. Usar `--update-secrets` daqui em diante |
 | Saída estruturada da API exige `additionalProperties: false` em todo objeto do schema | `withStrictObjects` aplica isso numa cópia do schema, sem poluir as definições |
+| Currículo saiu com a página 1 só com o cabeçalho e o conteúdo inteiro na 2. O encaixe em 1 página mirava 1123px, mas a folha A4 tem 1122,52px e o `scrollHeight` arredonda (1123,25 virava "cabe") | Alvo do encaixe em 1118px, altura medida sem arredondar e contagem de páginas do PDF final, com novo encolhimento se sair mais de 1 (`scripts/build-resume.js`) |
 
 ## Status atual
 

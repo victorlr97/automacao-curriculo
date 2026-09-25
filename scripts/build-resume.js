@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
+const { PDFParse } = require('pdf-parse');
 const { renderHtml } = require('./render');
 
 const CHROME_CANDIDATES = [
@@ -38,8 +39,36 @@ const MAX_SHRINK_RATIO = 1.35;
 const MIN_SCALE = 0.8;
 const MAX_ITERATIONS = 5;
 
+// A folha A4 tem 297mm = 1122,52px a 96dpi, e o Chrome não perdoa nem uma
+// fração: se o conteúdo passa disso por qualquer margem, as duas colunas vão
+// inteiras pra página 2 e a 1 fica só com o cabeçalho (medido: 1123,25px sai em
+// 2 páginas, 1118,19px sai em 1). Por isso o alvo do encaixe fica alguns px
+// abaixo do limite, e a altura é medida fracionada (scrollHeight arredonda:
+// 1123,25 virava "1123, cabe").
+const FIT_HEIGHT_PX = 1118;
+// Rede de segurança: se mesmo assim o PDF final sair com mais de 1 página num
+// currículo que deveria caber, encolhe mais um pouco e gera de novo.
+const MAX_PDF_RETRIES = 4;
+const RETRY_SHRINK = 0.985;
+const PDF_OPTIONS = {
+  format: 'A4',
+  printBackground: true,
+  margin: { top: '0', bottom: '0', left: '0', right: '0' }
+};
+
 async function measureHeight(page) {
-  return page.evaluate(() => document.querySelector('.page').scrollHeight);
+  return page.evaluate(() => document.querySelector('.page').getBoundingClientRect().height);
+}
+
+async function countPdfPages(pdfBuffer) {
+  // O pdf-parse toma posse do buffer que recebe e o deixa vazio; a cópia
+  // preserva o original, que ainda vai ser gravado em disco.
+  const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+  try {
+    return (await parser.getText()).pages.length;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 async function renderAtScale(page, data, scale) {
@@ -49,18 +78,21 @@ async function renderAtScale(page, data, scale) {
   await page.setContent(renderHtml(data, { scale }), { waitUntil: 'domcontentloaded' });
 }
 
+// Devolve a escala aplicada e se o currículo é do tipo que deve caber em 1
+// página (false = conteúdo de verdade pra 2 páginas, deixado como está).
 async function fitToSinglePage(page, data) {
   let scale = 1;
   let height = await measureHeight(page);
-  if (height <= PAGE_HEIGHT_PX) return;
-  if (height > PAGE_HEIGHT_PX * MAX_SHRINK_RATIO) return;
+  if (height <= FIT_HEIGHT_PX) return { scale, singlePage: true };
+  if (height > PAGE_HEIGHT_PX * MAX_SHRINK_RATIO) return { scale, singlePage: false };
 
   for (let i = 0; i < MAX_ITERATIONS && scale > MIN_SCALE; i++) {
-    scale = Math.max(MIN_SCALE, scale * (PAGE_HEIGHT_PX / height));
+    scale = Math.max(MIN_SCALE, scale * (FIT_HEIGHT_PX / height));
     await renderAtScale(page, data, scale);
     height = await measureHeight(page);
-    if (height <= PAGE_HEIGHT_PX) return;
+    if (height <= FIT_HEIGHT_PX) break;
   }
+  return { scale, singlePage: true };
 }
 
 // No Windows, escrever direto por cima de um arquivo que o navegador ainda
@@ -98,13 +130,14 @@ async function buildResume(dataPath, outputPdfPath) {
     const page = await browser.newPage();
     await page.setViewport({ width: PAGE_WIDTH_PX, height: PAGE_HEIGHT_PX });
     await renderAtScale(page, data, 1);
-    await fitToSinglePage(page, data);
+    let { scale, singlePage } = await fitToSinglePage(page, data);
     await fs.promises.mkdir(path.dirname(outputPdfPath), { recursive: true });
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', bottom: '0', left: '0', right: '0' }
-    });
+    let pdfBuffer = await page.pdf(PDF_OPTIONS);
+    for (let i = 0; i < MAX_PDF_RETRIES && singlePage && scale > MIN_SCALE && (await countPdfPages(pdfBuffer)) > 1; i++) {
+      scale = Math.max(MIN_SCALE, scale * RETRY_SHRINK);
+      await renderAtScale(page, data, scale);
+      pdfBuffer = await page.pdf(PDF_OPTIONS);
+    }
     await writeFileWithRetry(outputPdfPath, pdfBuffer);
   } finally {
     await browser.close();
