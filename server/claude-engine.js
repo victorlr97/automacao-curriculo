@@ -1,12 +1,36 @@
-const path = require('path');
-const spawn = require('cross-spawn');
+const Anthropic = require('@anthropic-ai/sdk');
 
-const PROJECT_ROOT = path.join(__dirname, '..');
 // Compor um currículo (ler o banco inteiro, escolher fatos, escrever tudo do
 // zero) pode levar bem mais que os 60-90s de uma chamada simples — em testes
 // reais já passou de 2 minutos. Timeout generoso pra não derrubar gerações
 // válidas que só estão demorando.
 const CLAUDE_TIMEOUT_MS = 240000;
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
+// Teto de saída por chamada (o raciocínio adaptativo conta aqui dentro). Um
+// currículo completo em JSON fica bem abaixo disso — a folga é pro raciocínio.
+const MAX_OUTPUT_TOKENS = 32000;
+
+let client;
+function getClient() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY não está definida (.env local ou variável de ambiente do serviço).');
+  }
+  // maxRetries do SDK (padrão 2) já cobre 429/5xx/queda de conexão.
+  if (!client) client = new Anthropic();
+  return client;
+}
+
+// A saída estruturada da API exige `additionalProperties: false` em todo
+// objeto do schema. Os schemas abaixo não repetem isso em cada nível, então é
+// aplicado aqui, numa cópia, em vez de poluir as definições.
+function withStrictObjects(schema) {
+  if (Array.isArray(schema)) return schema.map(withStrictObjects);
+  if (!schema || typeof schema !== 'object') return schema;
+  const out = {};
+  for (const [key, value] of Object.entries(schema)) out[key] = withStrictObjects(value);
+  if (out.type === 'object') out.additionalProperties = false;
+  return out;
+}
 
 // "education" passou de objeto único pra lista (pra suportar graduação +
 // pós-graduação, mestrado etc). Isso normaliza dados salvos antes dessa
@@ -477,68 +501,65 @@ ${jobDescription}
 Retorne o objeto preenchendo exatamente o schema fornecido.`;
 }
 
-function runClaude(prompt, schema, effort = 'high') {
-  return new Promise((resolve, reject) => {
-    // O prompt vai via stdin (não como argumento de CLI) para evitar o limite de
-    // tamanho de linha de comando do Windows, já que o prompt embute o banco de
-    // dados inteiro e pode passar de 8-10KB facilmente.
-    const args = [
-      '-p',
-      '--output-format', 'json',
-      '--json-schema', JSON.stringify(schema),
-      '--tools', '',
-      '--no-session-persistence',
-      '--model', 'sonnet',
-      // "low" era ~62% mais rápido, mas Victor notou currículos saindo mais
-      // genéricos/repetitivos com esse nível — a tarefa de compor o currículo
-      // inteiro pra cada vaga (o default "high") se beneficia de mais raciocínio
-      // do que "low" dava. Chamadas menores e mais isoladas (regenerar só o
-      // roteiro ou só a carta) passam "medium" explicitamente — não têm o banco
-      // inteiro pra ponderar, só o currículo já composto, e effort alto nelas
-      // só deixa a resposta mais lenta sem ganho de qualidade perceptível.
-      '--effort', effort
-    ];
+// "low" era ~62% mais rápido, mas Victor notou currículos saindo mais
+// genéricos/repetitivos com esse nível — a tarefa de compor o currículo
+// inteiro pra cada vaga (o default "high") se beneficia de mais raciocínio
+// do que "low" dava. Chamadas menores e mais isoladas (regenerar só o
+// roteiro ou só a carta) passam "medium" explicitamente — não têm o banco
+// inteiro pra ponderar, só o currículo já composto, e effort alto nelas
+// só deixa a resposta mais lenta sem ganho de qualidade perceptível.
+async function runClaude(prompt, schema, effort = 'high') {
+  const anthropic = getClient();
+  try {
+    // Streaming + finalMessage: a resposta pode levar minutos, e uma requisição
+    // não-streaming parada tanto tempo fica sujeita a ser derrubada no caminho
+    // (Cloud Run, proxies) antes de a API terminar.
+    const message = await anthropic.messages
+      .stream(
+        {
+          model: MODEL,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          thinking: { type: 'adaptive' },
+          output_config: {
+            effort,
+            format: { type: 'json_schema', schema: withStrictObjects(schema) }
+          },
+          messages: [{ role: 'user', content: prompt }]
+        },
+        { signal: AbortSignal.timeout(CLAUDE_TIMEOUT_MS) }
+      )
+      .finalMessage();
 
-    const child = spawn('claude', args, { cwd: PROJECT_ROOT });
-    let stdout = '';
-    let stderr = '';
+    if (message.stop_reason === 'refusal') {
+      const category = message.stop_details && message.stop_details.category;
+      throw new Error(`A API recusou a requisição${category ? ` (categoria: ${category})` : ''}.`);
+    }
+    if (message.stop_reason === 'max_tokens') {
+      throw new Error(`Resposta cortada no limite de ${MAX_OUTPUT_TOKENS} tokens de saída.`);
+    }
 
-    const timeout = setTimeout(() => {
-      child.kill();
-      reject(new Error('Tempo limite ao chamar o Claude Code CLI (mais de 120s).'));
-    }, CLAUDE_TIMEOUT_MS);
-
-    child.stdout.on('data', d => { stdout += d; });
-    child.stderr.on('data', d => { stderr += d; });
-
-    child.on('error', err => {
-      clearTimeout(timeout);
-      reject(new Error(`Não foi possível iniciar o Claude Code CLI: ${err.message}`));
-    });
-
-    child.on('close', code => {
-      clearTimeout(timeout);
-      if (code !== 0) {
-        reject(new Error(`Claude Code CLI encerrou com erro (código ${code}): ${stderr || stdout}`));
-        return;
-      }
-      let envelope;
-      try {
-        envelope = JSON.parse(stdout);
-      } catch (err) {
-        reject(new Error(`Resposta do Claude Code CLI não é um JSON válido: ${err.message}`));
-        return;
-      }
-      if (envelope.is_error || !envelope.structured_output) {
-        reject(new Error(`Claude Code CLI não retornou saída estruturada válida: ${envelope.result || stdout}`));
-        return;
-      }
-      resolve(envelope.structured_output);
-    });
-
-    child.stdin.write(prompt);
-    child.stdin.end();
-  });
+    const textBlock = message.content.find(block => block.type === 'text');
+    if (!textBlock) throw new Error('A API não retornou nenhum bloco de texto.');
+    try {
+      return JSON.parse(textBlock.text);
+    } catch (err) {
+      throw new Error(`Resposta da API não é um JSON válido: ${err.message}`);
+    }
+  } catch (err) {
+    if (err instanceof Anthropic.APIUserAbortError || (err && err.name === 'TimeoutError')) {
+      throw new Error(`Tempo limite ao chamar a API da Anthropic (mais de ${CLAUDE_TIMEOUT_MS / 1000}s).`);
+    }
+    if (err instanceof Anthropic.AuthenticationError) {
+      throw new Error('A API da Anthropic recusou a chave (ANTHROPIC_API_KEY inválida ou revogada).');
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      throw new Error('Limite de requisições da API da Anthropic atingido. Tente de novo em instantes.');
+    }
+    if (err instanceof Anthropic.APIError) {
+      throw new Error(`Erro da API da Anthropic (${err.status}): ${err.message}`);
+    }
+    throw err;
+  }
 }
 
 async function generateResumeData(rawDatabase, jobDescription) {

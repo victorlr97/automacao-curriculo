@@ -1,7 +1,6 @@
 // Gerencia a lista de e-mails autorizados a usar o app (config/allowlist no
-// Firestore). Enquanto o motor de IA for a CLI do Claude Code (assinatura
-// pessoal, não API paga), o acesso precisa ficar restrito a poucas contas —
-// ver ROADMAP.md, Fase 2.
+// Firestore). Cada geração é cobrada por token na chave da API, então o acesso
+// precisa ficar restrito a poucas contas — ver ROADMAP.md, Fase 2.
 //
 // Uso:
 //   node scripts/manage-allowlist.js list

@@ -2,7 +2,7 @@
   "name": "automacao-curriculo",
   "version": "1.0.0",
   "private": true,
-  "description": "Gerador local de currículos em PDF, adaptados por vaga, sem API paga.",
+  "description": "Gerador de currículos em PDF, adaptados por vaga com a API da Anthropic.",
   "scripts": {
     "build-resume": "node scripts/build-resume.js",
     "start": "node server/index.js",
@@ -11,8 +11,8 @@
     "dev": "concurrently -n server,client -c blue,magenta \"npm start\" \"npm run dev:client\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@puppeteer/browsers": "^3.0.6",
-    "cross-spawn": "^7.0.6",
     "express": "^4.21.2",
     "firebase-admin": "^14.2.0",
     "multer": "^2.2.0",

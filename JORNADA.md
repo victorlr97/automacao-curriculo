@@ -86,6 +86,22 @@ Validação: mesmo método da Fase 2 (conta de teste descartável via API REST d
 
 Um quinto bug só apareceu testando com a conta real (a de teste tinha poucos fatos, então a chamada pra IA terminava rápido): a geração de currículo voltava 502 no navegador mesmo o log do Cloud Run mostrando `HTTP 200` — o servidor tinha terminado com sucesso (currículo salvo de verdade no Firestore/Storage), só que depois de ~90s, e o **Firebase Hosting** (usado até então como proxy — `rewrites` no `firebase.json` — na frente do Cloud Run) tem um timeout próprio de proxy, bem mais curto que o `--timeout` configurado no Cloud Run (420s) e não configurável por fora. Decisão: tirar o Hosting do caminho inteiramente, em vez de tentar contornar caso a caso — `firebase.json` passou a só ter um `redirect` 301 da URL antiga (`automacao-curriculo-app.web.app`) pra URL do próprio Cloud Run (`automacao-curriculo-6tii7mjymq-uc.a.run.app`), que já serve o client estático e a API no mesmo domínio, sem proxy nenhum no meio. `APP_BASE_URL` atualizado pra essa URL nova (usada nos links do e-mail de pedido de acesso).
 
+## Fase 4 — Motor de IA na API da Anthropic
+
+O motor deixou de ser a CLI do Claude Code (subprocesso `claude -p`, autenticado com a sessão pessoal) e passou a chamar a Messages API direto, com chave própria. Isso também tirou do `Dockerfile` a instalação global da CLI e do `cloudrun-start.sh` a cópia das credenciais.
+
+Decisões:
+- `runClaude` em `server/claude-engine.js` manteve a assinatura (`prompt, schema, effort`), então as 7 funções que dependem dele (gerar currículo, importar, traduzir, roteiro, carta, feedback) não mudaram.
+- Modelo `claude-sonnet-5`, o mesmo que a CLI usava (`--model sonnet`). Dá pra trocar pela variável `ANTHROPIC_MODEL` sem mexer no código.
+- O `--json-schema` da CLI virou saída estruturada da API (`output_config.format` com `json_schema`). A API exige `additionalProperties: false` em todo objeto do schema, então uma função (`withStrictObjects`) aplica isso numa cópia, sem repetir em cada nível das definições.
+- Streaming com `finalMessage()`: a geração pode levar minutos, e uma requisição não-streaming parada tanto tempo fica sujeita a ser derrubada no caminho. O timeout de 240s continua, via `AbortSignal`.
+- O `--effort` da CLI virou `output_config.effort` (`high` na composição do currículo, `medium` nas chamadas menores), com raciocínio adaptativo.
+- Chave: `.env` na raiz em dev (gitignorado e no `.dockerignore`, carregado por `process.loadEnvFile` no `server/index.js`), secret `anthropic-api-key` no Secret Manager em produção, exposto como variável de ambiente.
+
+Validação: duas chamadas reais em dev (resumo de feedback em 7,4s; currículo completo, o schema mais aninhado, em 14,5s com um banco mínimo) e deploy no Cloud Run com `/` respondendo 200 e `/api/database` 401 sem token. Falta a primeira geração na conta real em produção, que tem o banco de fatos grande.
+
+Um erro no deploy: `gcloud run deploy --set-secrets` substitui todos os secrets do serviço, então a senha do Gmail saiu da revisão `00008`. Foi restaurada na `00009` com `--update-secrets`, que acrescenta sem apagar os outros.
+
 ## Problemas e soluções (resumo)
 
 | Problema | Solução |
@@ -107,7 +123,9 @@ Um quinto bug só apareceu testando com a conta real (a de teste tinha poucos fa
 | `--set-build-env-vars` do `gcloud run deploy` não passa `--build-arg` pro `docker build` quando há `Dockerfile` (só vale pra buildpacks) | Chaves `VITE_*` fixadas como `ENV` direto no `Dockerfile` — não são segredo |
 | `firebase deploy --only hosting` publicava um build antigo da pasta `public/` local, que a Hosting servia por cima do rewrite pro Cloud Run | `firebase.json` aponta `public` pra uma pasta sempre vazia (`hosting-empty/`) |
 | Firebase Hosting como proxy (`rewrites`) tem timeout próprio, curto demais pra geração de currículo (~90s) | Hosting virou só um `redirect` 301 pra URL do Cloud Run — sem proxy no meio |
+| `gcloud run deploy --set-secrets` substitui todos os secrets do serviço (a senha do Gmail saiu da revisão) | Restaurada com `--update-secrets`, que só acrescenta. Usar `--update-secrets` daqui em diante |
+| Saída estruturada da API exige `additionalProperties: false` em todo objeto do schema | `withStrictObjects` aplica isso numa cópia do schema, sem poluir as definições |
 
 ## Status atual
 
-Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run; `automacao-curriculo-app.web.app` redireciona pra essa), geração de currículo confirmada sem 502 na conta real. Render desligado — migração concluída de ponta a ponta.
+Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run; `automacao-curriculo-app.web.app` redireciona pra essa), geração de currículo confirmada sem 502 na conta real. Render desligado — migração concluída de ponta a ponta. Em 2026-09-25 o motor de IA passou da CLI do Claude Code para a API da Anthropic (Fase 4), no ar em produção e aguardando a primeira geração real na conta real.

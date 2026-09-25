@@ -6,7 +6,7 @@ Gerador de currículos em PDF, adaptados por vaga, usando IA.
 
 Cada conta tem um banco de fatos (experiências, projetos, skills, formação etc). Você cola a descrição de uma vaga e a IA monta um currículo novo a partir desses fatos, escolhendo o que é relevante pra aquela vaga.
 
-O motor de IA é a CLI do Claude Code (`claude -p ...`), não a API paga por token.
+O motor de IA é a API da Anthropic (Messages API, com saída estruturada em JSON), cobrada por token. O modelo padrão é `claude-sonnet-5`; dá pra trocar pela variável `ANTHROPIC_MODEL`.
 
 ## Funcionalidades
 
@@ -21,7 +21,7 @@ O motor de IA é a CLI do Claude Code (`claude -p ...`), não a API paga por tok
 
 ## Stack
 
-- Backend: Node.js + Express, `puppeteer-core` (renderização do PDF), motor de IA via CLI do Claude Code
+- Backend: Node.js + Express, `puppeteer-core` (renderização do PDF), motor de IA via API da Anthropic (`@anthropic-ai/sdk`)
 - Frontend: React 19 + TypeScript + Vite + Tailwind CSS v4
 - Dados: Firebase Auth (login), Firestore (banco de fatos e metadados dos currículos), Firebase Storage (PDFs gerados)
 - Deploy: Cloud Run (`Dockerfile`), URL principal `https://automacao-curriculo-6tii7mjymq-uc.a.run.app` — o Cloud Run já serve o client estático e a API no mesmo domínio, sem precisar de proxy. Firebase Hosting (`firebase.json`) só existe pra redirecionar a URL antiga (`automacao-curriculo-app.web.app`) pra essa — usá-lo como proxy (`rewrites`) chegou a ser tentado, mas o Hosting tem um timeout próprio (~60s) que cortava requisições lentas (geração de currículo) antes do Cloud Run terminar, mesmo com o `--timeout` do Cloud Run configurado bem mais alto.
@@ -29,7 +29,7 @@ O motor de IA é a CLI do Claude Code (`claude -p ...`), não a API paga por tok
 ## Pré-requisitos
 
 - Node.js 22+
-- Claude Code instalado e autenticado (`claude` no PATH)
+- Uma chave da API da Anthropic em `ANTHROPIC_API_KEY`. Localmente, num arquivo `.env` na raiz (já gitignorado); no Cloud Run, como secret do Secret Manager exposto como variável de ambiente
 - Google Chrome ou Microsoft Edge instalado (em produção o Chrome é baixado automaticamente, ver `scripts/ensure-chrome.js`)
 - Um projeto Firebase com Auth (e-mail/senha), Firestore e Storage habilitados
 

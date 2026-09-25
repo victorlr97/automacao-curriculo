@@ -3,6 +3,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+
+// Carrega o .env da raiz (gitignorado) antes de qualquer módulo que leia
+// process.env. Não sobrescreve variável já definida, então no Cloud Run vale
+// o que estiver configurado no serviço.
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) process.loadEnvFile(envPath);
+
 const multer = require('multer');
 const { PDFParse } = require('pdf-parse');
 const { exec } = require('child_process');
@@ -45,8 +52,8 @@ function slugify(text) {
   return slug || 'curriculo';
 }
 
-// Loga o erro completo (stack, stderr da CLI do Claude, mensagem do driver do
-// Firebase etc.) só no servidor — nunca repassa detalhe interno pro cliente,
+// Loga o erro completo (stack, mensagem da API da Anthropic, mensagem do driver
+// do Firebase etc.) só no servidor — nunca repassa detalhe interno pro cliente,
 // pra não vazar caminho de arquivo, versão de dependência ou outro detalhe de
 // infraestrutura pra quem só está autenticado (não necessariamente confiável).
 function sendServerError(res, err, publicMessage) {
@@ -60,9 +67,9 @@ function sendServerError(res, err, publicMessage) {
 // conta. O uid vem de um token do Firebase verificado no servidor — nunca de
 // algo que o cliente escolhe na URL. ----------
 
-// Enquanto o motor de IA for a CLI do Claude Code (assinatura pessoal, não
-// API paga por token), o acesso fica restrito a uma lista de e-mails —
-// gerenciada em config/allowlist no Firestore (ver scripts/manage-allowlist.js).
+// Cada geração é cobrada por token na chave da API, então o acesso fica
+// restrito a uma lista de e-mails — gerenciada em config/allowlist no
+// Firestore (ver scripts/manage-allowlist.js).
 // Ter uma conta no Firebase Auth não basta: sem estar na lista, nenhuma rota
 // /api responde, mesmo que o login em si tenha funcionado.
 async function isEmailAllowed(email) {

@@ -31,10 +31,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
   && rm -rf /var/lib/apt/lists/*
 
-# CLI do Claude Code — autenticada em runtime copiando a sessão pessoal de um
-# secret montado (ver server/cloudrun-start.sh), não por login interativo.
-RUN npm install -g @anthropic-ai/claude-code
-
 WORKDIR /app
 
 COPY package.json package-lock.json ./

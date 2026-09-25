@@ -1,20 +1,20 @@
 # Roadmap
 
-Última atualização: 2026-08-06
+Última atualização: 2026-09-25
 
 ## Contexto e restrições
 
 - Projeto de portfólio (product designer), hoje em teste 100% local.
-- **Restrição financeira**: a migração para a API paga do Claude só acontece quando o projeto estiver "pra valer" (mais usuários, lançamento real, ou quando a situação financeira permitir). Até lá, o motor de IA continua sendo a CLI do Claude Code (via assinatura pessoal, sem custo por chamada).
+- **Custo do motor de IA**: até 2026-09-25 o motor era a CLI do Claude Code (assinatura pessoal, sem custo por chamada). Desde essa data é a API da Anthropic, cobrada por token (ver Fase 4).
 - Banco de dados/autenticação: **Firebase** (Auth + Firestore), pelo free tier.
-- Consequência prática: enquanto o motor de IA for a CLI local, qualquer deploy online deve ser **fechado/beta** (allowlist de convidados), nunca público — usar a assinatura pessoal pra servir desconhecidos pode estourar limite de uso e não é o uso pretendido da ferramenta.
+- Consequência prática: cada geração gasta tokens da chave da API, então o deploy segue **fechado/beta** (allowlist de convidados), nunca público, até existir controle de custo por usuário.
 
 ## Ordem recomendada
 
 1. Firebase (Auth + Firestore) — desbloqueia multiusuário sem custo.
 2. Deploy em beta fechado — mantendo o motor atual (CLI), acesso restrito.
 3. Fluxo de IA no n8n — prototipado com custo zero, só troca pra chamada paga quando validado.
-4. Migração para a API paga do Claude — quando o projeto for lançado de verdade.
+4. Migração para a API paga do Claude — antecipada, feita em 2026-09-25 (ver Fase 4).
 5. UX/UI — desacoplado da infra, pode entrar em paralelo com qualquer fase acima.
 
 ## Fases
@@ -37,7 +37,7 @@
 - [x] Variáveis de ambiente e segredos configurados no Render (Secret Files pra chave da Admin SDK e sessão da CLI do Claude)
 - [x] Testado ponta a ponta em produção: login, banco de fatos, geração de currículo com IA, PDF — tudo via conta de teste descartável
 - [x] **Restringir acesso** — middleware do servidor checa o e-mail contra `config/allowlist` no Firestore antes de qualquer rota `/api`; ter conta no Firebase Auth não basta mais. Gerenciado por `scripts/manage-allowlist.js` ou direto pelo console do Firebase.
-- [ ] Acompanhar uso da assinatura Claude Code pra não estourar limite — sem automação, é acompanhar manualmente por enquanto.
+- [x] ~~Acompanhar uso da assinatura Claude Code~~ — obsoleto desde a Fase 4 (o motor agora é a API paga; o gasto se acompanha no Console da Anthropic).
 
 Detalhes técnicos e decisões (Blaze, Render, Storage) registrados no [JORNADA.md](JORNADA.md).
 
@@ -60,8 +60,13 @@ Detalhes técnicos (bugs encontrados e corrigidos: montagem de secret via `cp`, 
 - [ ] Prototipar mantendo custo zero
 - [ ] Comparar qualidade/acerto do resultado com a abordagem atual
 
-### Fase 4 — Migração para API paga do Claude
-- [ ] Trocar `server/claude-engine.js` do spawn de CLI para `@anthropic-ai/sdk`
+### Fase 4 — Migração para API paga do Claude — implementada em 2026-09-25, falta validar na conta real
+- [x] Trocar `server/claude-engine.js` do spawn de CLI para `@anthropic-ai/sdk` (Messages API com saída estruturada, modelo `claude-sonnet-5`, sobrescrevível por `ANTHROPIC_MODEL`)
+- [x] Chave em `ANTHROPIC_API_KEY`: `.env` local (gitignorado) e secret `anthropic-api-key` no Secret Manager, exposto como variável de ambiente no Cloud Run
+- [x] `Dockerfile` e `server/cloudrun-start.sh` sem a CLI do Claude e sem a cópia de credenciais
+- [x] Deploy no Cloud Run; serviço sobe e responde (`/` 200, `/api/database` 401 sem token)
+- [ ] Gerar um currículo na conta real em produção e confirmar que o resultado e o tempo estão iguais ou melhores que na CLI
+- [ ] Remover o secret `claude-cli-credentials` e o volume dele do serviço (sem uso desde esta fase)
 - [ ] Adicionar controle de custo (limite por usuário, cache de prompt)
 - [ ] Conectar o fluxo n8n na API real
 
@@ -75,4 +80,4 @@ Detalhes técnicos (bugs encontrados e corrigidos: montagem de secret via `cp`, 
 
 ## Status
 
-Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run, migrado do Render; `automacao-curriculo-app.web.app` redireciona pra essa), acesso restrito por allowlist. Render desligado. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.
+Fases 1, 2 e 2.1 concluídas — app em produção em https://automacao-curriculo-6tii7mjymq-uc.a.run.app (Cloud Run, migrado do Render; `automacao-curriculo-app.web.app` redireciona pra essa), acesso restrito por allowlist. Render desligado. A Fase 4 (motor de IA na API da Anthropic) foi implementada e está no ar desde 2026-09-25, aguardando a primeira geração real na conta real. Próximo passo estrutural é a Fase 3 (fluxo de IA no n8n). Fase 5 (UX/UI) em andamento em paralelo, noutra sessão.
